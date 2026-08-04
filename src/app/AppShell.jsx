@@ -6,6 +6,7 @@ import { BuildProgramModule } from '../modules/build-program/BuildProgramModule'
 import { FloorLogModule } from '../modules/floor-log/FloorLogModule'
 import { AttendanceModule } from '../modules/attendance/AttendanceModule'
 import { AssessmentModule } from '../modules/assessment/AssessmentModule'
+import { ReportsModule } from '../modules/reports/ReportsModule'
 
 const MODES = ['build', 'assess', 'att', 'floor', 'track', 'reports']
 const MODE_LABELS = {
@@ -60,6 +61,8 @@ export function AppShell() {
           <AttendanceModule />
         ) : activeMode === 'assess' ? (
           <AssessmentModule />
+        ) : activeMode === 'reports' ? (
+          <ReportsModule />
         ) : (
           <p>{MODE_LABELS[activeMode]} — not built yet (Phase 4).</p>
         )}
