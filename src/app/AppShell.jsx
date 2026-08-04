@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { InvitePanel } from './InvitePanel'
 import { TrackerModule } from '../modules/tracker/TrackerModule'
+import { BuildProgramModule } from '../modules/build-program/BuildProgramModule'
 
 const MODES = ['build', 'assess', 'att', 'floor', 'track', 'reports']
 const MODE_LABELS = {
@@ -48,6 +49,8 @@ export function AppShell() {
       <main>
         {activeMode === 'track' ? (
           <TrackerModule />
+        ) : activeMode === 'build' ? (
+          <BuildProgramModule />
         ) : (
           <p>{MODE_LABELS[activeMode]} — not built yet (Phase 4).</p>
         )}
