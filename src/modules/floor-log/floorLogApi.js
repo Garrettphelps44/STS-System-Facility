@@ -20,6 +20,28 @@ export async function ensureSession(facilityId, athleteId, date) {
   return data
 }
 
+// Every logged session's total (asc_override if set, else the sum of
+// its sets' values) for one athlete — the raw material the A:C
+// progression math groups by resolved program week.
+export async function fetchAthleteHistory(facilityId, athleteId) {
+  const { data: sessions, error: sessErr } = await supabase
+    .from('floor_sessions')
+    .select('id, date, asc_override')
+    .eq('facility_id', facilityId)
+    .eq('athlete_id', athleteId)
+  if (sessErr) throw sessErr
+  if (!sessions.length) return []
+  const ids = sessions.map((s) => s.id)
+  const { data: logs, error: logErr } = await supabase
+    .from('floor_logs')
+    .select('session_id, value')
+    .in('session_id', ids)
+  if (logErr) throw logErr
+  const sums = {}
+  logs.forEach((l) => { if (l.value != null) sums[l.session_id] = (sums[l.session_id] || 0) + Number(l.value) })
+  return sessions.map((s) => ({ date: s.date, total: s.asc_override != null ? Number(s.asc_override) : (sums[s.id] || 0) }))
+}
+
 export async function fetchLogs(sessionId) {
   const { data, error } = await supabase
     .from('floor_logs')

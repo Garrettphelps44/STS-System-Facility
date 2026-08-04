@@ -14,6 +14,21 @@ export function setsRepsFrom(vol) {
   return { rx, sets: m ? +m[1] : 1, reps: m ? +m[2] : null }
 }
 
+// Ported from reference/reference:Index.html (roundPlate, ~line 3138) —
+// rounds an auto-prescribed weight to a plate-friendly number.
+export function roundPlate(v, key) {
+  const barbell = /(^|\s)bb |^back squat|^front squat|conventional deadlift|trap bar/.test(key || '')
+  const r = Math.max(5, Math.round(v / 5) * 5)
+  return barbell ? Math.max(45, r) : r
+}
+
+// Ported from reference/reference:Index.html (planSets, ~line 3158) —
+// how many sets a prescribed exercise's target string implies.
+export function planSetsFromTarget(target) {
+  const m = String(target || '').match(/^(\d+)\s*[x×]/i)
+  return m ? +m[1] : 1
+}
+
 export function contextFor(program) {
   const c = program.constraints || {}
   return { system: program.system, sessionLength: c.sessionLength, equipment: c.equipment, skill: c.skill, sport: c.sport }
@@ -48,5 +63,5 @@ export function resolveDaySession(program, dateISO) {
       })
     })
 
-  return { offday: false, week: hit.week, wd, code: sess.code, prescribed }
+  return { offday: false, week: hit.week, wd, dayIndex: hit.di, trainingDays: activeDayNames.length, code: sess.code, prescribed }
 }

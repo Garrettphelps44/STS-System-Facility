@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as api from './floorLogApi'
-import { resolveDaySession } from './floorEngine'
+import * as assessmentApi from '../assessment/assessmentApi'
+import { planSetsFromTarget, resolveDaySession, roundPlate } from './floorEngine'
+import { athleteWeekTotals, progressedPSC } from './progression'
 import { EXDB, EXNAMES, wkValue } from '../build-program/engine/workload'
 
 function groupLogs(rows) {
@@ -43,11 +45,75 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
       const day = resolveDaySession(program, date)
       const sess = await api.ensureSession(facilityId, athlete.id, date)
       let rows = await api.fetchLogs(sess.id)
-      if (!rows.length && !day.offday && day.prescribed.length) {
+      const isFreshSession = !rows.length
+
+      if (isFreshSession && !day.offday && day.prescribed.length) {
         rows = await api.seedExercises(facilityId, sess.id, athlete.id, day.prescribed)
       }
+
+      // Assessment auto-fill — runs once, at first view of a session,
+      // same trigger point as the reference's maybeApplyAssessment but
+      // without needing its "assessApplied" flag: a session's rows only
+      // get seeded once, so isFreshSession is naturally false forever
+      // after (the sess.projected==null check covers the off-day case,
+      // where nothing gets seeded and rows.length would otherwise stay
+      // 0 on every reload).
+      // This whole block is an optional assist on top of a session that
+      // already works without it (that's exactly how Floor Log shipped
+      // before Assessment existed) — a failure here (Assessment not set
+      // up for this athlete yet, a transient fetch error, whatever)
+      // must never block the coach from logging the session itself, so
+      // it's isolated in its own try/catch rather than the outer one.
+      let projectedValue = sess.projected
+      if (isFreshSession && sess.projected == null && athlete.height_feet != null) {
+        try {
+          const assessment = await assessmentApi.fetchAssessment(facilityId, athlete.id)
+          if (assessment?.psc != null) {
+            let psc = assessment.psc
+            if (!day.offday) {
+              const history = await api.fetchAthleteHistory(facilityId, athlete.id)
+              const weekTotals = athleteWeekTotals(history, program, date)
+              psc = progressedPSC(assessment.psc, weekTotals, day.week, day.dayIndex, day.trainingDays || 1)
+            }
+            projectedValue = psc
+            await api.updateSession(sess.id, { projected: psc })
+
+            if (rows.length) {
+              const ft = athlete.height_feet
+              const inch = athlete.height_inches
+              let A0 = 0
+              const matches = []
+              rows.forEach((row) => {
+                const b = assessment.weights?.[row.exercise]
+                if (b == null) return
+                const r = row.reps
+                const ns = planSetsFromTarget(row.target)
+                let av = 0
+                for (let si = 1; si <= ns; si++) {
+                  const v = wkValue(row.exercise, ft, inch, si, b, r, null)
+                  if (v != null) av += v
+                }
+                matches.push({ row, b, r })
+                A0 += av
+              })
+              if (A0 > 0) {
+                const k = psc / A0
+                for (const m of matches) {
+                  const w = roundPlate(m.b * k, m.row.exercise)
+                  const v = wkValue(m.row.exercise, ft, inch, 1, w, m.r, null)
+                  await api.updateSet(m.row.id, { weight: w, value: v })
+                }
+                rows = await api.fetchLogs(sess.id)
+              }
+            }
+          }
+        } catch (assessErr) {
+          console.error('Assessment auto-fill skipped:', assessErr)
+        }
+      }
+
       setSessionId(sess.id)
-      setProjected(sess.projected ?? '')
+      setProjected(projectedValue ?? '')
       setAscOverride(sess.asc_override)
       setCtx(day)
       setSlots(groupLogs(rows))
@@ -56,7 +122,7 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
     } finally {
       setLoading(false)
     }
-  }, [facilityId, athlete.id, program, date])
+  }, [facilityId, athlete.id, athlete.height_feet, athlete.height_inches, program, date])
 
   useEffect(() => { loadSession() }, [loadSession])
 
