@@ -171,9 +171,25 @@ The rule for all six: build it, use it for real, commit it, then start the next 
 
 **Step 25 — Attendance fourth.** Port the `STSAtt` data layer logic (statuses, point values, teams as display groupings), but write records to the `attendance` table instead of the `sts-attendance-v3` blob.
 
-**Step 26 — Assessment fifth.**
+**Step 26 — Assessment fifth.** ✅ DONE.
 
-**Step 27 — Reports last.** It depends on all the others. Port the unified-athlete logic and the share-token system. Reports is also your best demo surface — make it the one that looks sharpest.
+**What changed / what we learned:**
+- Confirmed directly against the reference before building anything, per Garrett's own instruction to check first: Assessment's raw data entry (a movement name + a weight) is structurally identical to a Test Database entry — same {athlete, named thing, value, date} shape. Garrett's call: keep it as its own module anyway, matching the reference exactly, rather than fold it into Tracker — the look-alike data entry stays because the PSC formula and the weekly acute:chronic progression built on top of it are the actual reason to keep it separate, not the data entry screen itself.
+- The reference's movement list isn't "5 movements" — that's `ASSESS_REF_PER_DAY`, an unrelated scaling constant, confused for the list size at first. Actually running the dedup logic against `POOL`/`EXDB` gives **22 movements** (30 raw entries across 5 pool categories, minus duplicates like "Cable Tricep Extensions" appearing in two categories).
+- New `assessments` table: one row per athlete, overwritten on each computation, no history — matches the reference's own behavior (`a.assessment` was always a single overwritten object, never an array).
+- The reference's PSC auto-fill/weekly-progression math actually lives in Floor Log (it reads Floor Log's own session history to compute the acute:chronic ratio), not in Assessment. Wiring it in required editing Floor Log too — an explicit, Garrett-approved exception to "Assessment only" for this step. Ported as `src/modules/floor-log/progression.js` (`athleteWeekTotals`/`weekTargetTotal`/`progressedPSC`), verified against hand-calculated values before touching the UI.
+- Real bug caught during verification: the assessment lookup inside Floor Log's session-load wasn't fault-isolated — a failed lookup took down the *entire* session load, not just the optional auto-fill. Fixed with its own try/catch; Floor Log now degrades to manual-entry on any auto-fill failure.
+- Known (not a bug) characteristic: if only some of a session's exercises have an assessed weight, the auto-prescribed weight for those can look extreme (e.g. 805 lbs), because the scale factor makes that one exercise's workload cover the whole session's target alone. Verified by hand-computing the reference's actual formula — not something introduced here.
+
+**Step 27 — Reports last.** ✅ DONE. It depends on all the others. Port the unified-athlete logic and the share-token system. Reports is also your best demo surface — make it the one that looks sharpest.
+
+**What changed / what we learned:**
+- Cut the reference's entire `unifiedAthletes()` / "Reconcile Names" mechanism, not just the Culture branch inside it. That mechanism only existed to paper over the old app storing athletes by name across disconnected localStorage blobs; every module built in this rebuild already references real `athlete_id` foreign keys, so there was nothing left to reconcile.
+- Assessment's PSC on the report card is new scope, not a straight port — confirmed by reading the reference that its Reports never touched `a.assessment` at all (Assessment only ever fed Floor Log there). Added per Garrett's explicit instruction for this step.
+- The share-token system landed differently than the reference's approach: the reference stored a frozen JSON `snapshot` at share-creation time; this schema (decided back in Phase 2) computes the report live at view-time instead. Anonymous access goes through a single `get_shared_report(token)` RPC — `SECURITY DEFINER`, every subquery hardcoded to the token-matched athlete/facility, token is the only input — rather than an RLS policy granting anonymous table reads. `report_shares` itself still grants zero anonymous access. This exact gap was flagged in `0002_policies.sql`'s own comments back in Phase 2 ("deliberately not added here — that belongs to the Reports module"); this step is what closed it.
+- `reportBuilder.js`'s pure functions are the one source of truth for the report math — the authenticated view and the anonymous RPC path both call the exact same functions on same-shaped data, so there's no second implementation to drift out of sync.
+- Cut the radar chart per Garrett's call — the report stayed a single continuous page, written for a parent to read, not a coach dashboard.
+- Verified end-to-end, all six checks Garrett specified: real cross-module data for one athlete; a share link opened in a separate tab with zero auth touched, matching the authenticated view exactly; an athlete-role login confirmed to see only their own report, with a direct query for another athlete blocked by RLS (empty result, not an error); a freshly-created second facility seeing none of facility A's data; all five other modules still working; a clean mobile viewport including the training-load chart.
 
 **Step 28.** After each module: open it on your phone. If it's painful on a phone, coaches won't use it on the floor.
 
