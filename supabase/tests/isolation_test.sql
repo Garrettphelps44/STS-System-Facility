@@ -61,6 +61,14 @@ create temporary table _test_results (
 -- this temp table (the connecting role, typically `postgres`, is) — grant
 -- it explicitly so the impersonated checks can log their own results.
 grant select, insert on _test_results to authenticated;
+-- `seq serial` implicitly created a sequence backing the default; INSERT
+-- needs nextval() on it too, which is a SEPARATE privilege from the table
+-- grant above — without this, every impersonated INSERT below fails with
+-- "permission denied for sequence _test_results_seq_seq".
+do $$
+begin
+  execute format('grant usage, select on sequence %s to authenticated', pg_get_serial_sequence('_test_results', 'seq'));
+end $$;
 
 -- ---------------------------------------------------------------------
 -- 2. Seed data — run as the elevated connection role (bypasses RLS as
