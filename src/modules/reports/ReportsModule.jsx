@@ -67,29 +67,30 @@ export function ReportsModule() {
     }
   }
 
-  if (loading) return <p>Loading Reports…</p>
+  if (loading) return <p className="sub">Loading Reports…</p>
 
   return (
     <div>
+      <p className="eyebrow">Reports</p>
       <h2>Athlete Reports</h2>
-      <p>One page per athlete — testing, attendance, and training progress in one place.</p>
-      {error && <p role="alert">{error}</p>}
+      <p className="sub">One page per athlete — testing, attendance, and training progress in one place.</p>
+      {error && <p className="error-text" role="alert">{error}</p>}
 
       {!isAthlete && athletes.length > 1 && (
-        <div>
-          <label>Athlete</label>
+        <label className="field" style={{ maxWidth: 340 }}>
+          <span className="lab">Athlete</span>
           <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
             <option value="">Select athlete…</option>
             {athletes.map((a) => (
               <option key={a.id} value={a.id}>{a.name}{a.sport ? ` — ${a.sport}` : ''}</option>
             ))}
           </select>
-        </div>
+        </label>
       )}
 
-      {athletes.length === 0 && <p>No athletes yet — add one in Tracker first.</p>}
-      {!selectedId && athletes.length > 1 && <p>Pick an athlete to see their report.</p>}
-      {selectedId && reportLoading && <p>Loading report…</p>}
+      {athletes.length === 0 && <p className="sub">No athletes yet — add one in Tracker first.</p>}
+      {!selectedId && athletes.length > 1 && <p className="sub">Pick an athlete to see their report.</p>}
+      {selectedId && reportLoading && <p className="sub">Loading report…</p>}
 
       {report && !reportLoading && (
         <ReportCard

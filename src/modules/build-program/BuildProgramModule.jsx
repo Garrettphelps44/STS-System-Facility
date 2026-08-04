@@ -96,13 +96,13 @@ export function BuildProgramModule() {
     }
   }
 
-  if (loading) return <p>Loading programs…</p>
+  if (loading) return <p className="sub">Loading programs…</p>
 
   return (
     <div>
-      {error && <p role="alert">{error}</p>}
+      {error && <p className="error-text" role="alert">{error}</p>}
       {page === 'output' && (
-        <button type="button" onClick={() => setPage('constraints')}>
+        <button className="btn ghost" type="button" onClick={() => setPage('constraints')} style={{ marginBottom: 18 }}>
           Edit constraints
         </button>
       )}

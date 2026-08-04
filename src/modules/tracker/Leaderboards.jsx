@@ -49,46 +49,48 @@ export function Leaderboards({ athletes, metrics, entries }) {
   return (
     <div>
       <h2>Leaderboards</h2>
-      <p>Ranked across your athletes.</p>
+      <p className="sub">Ranked across your athletes.</p>
 
-      <div>
-        <button type="button" aria-pressed={mode === 'best'} onClick={() => setMode('best')}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        <button className="btn" type="button" aria-pressed={mode === 'best'} onClick={() => setMode('best')}>
           All-time best
         </button>
-        <button type="button" aria-pressed={mode === 'latest'} onClick={() => setMode('latest')}>
+        <button className="btn" type="button" aria-pressed={mode === 'latest'} onClick={() => setMode('latest')}>
           Latest test
         </button>
       </div>
 
       {entries.length === 0 ? (
-        <p>No test data yet — add some on the Test Database tab.</p>
+        <p className="sub">No test data yet — add some on the Test Database tab.</p>
       ) : (
-        rankMetrics.map((m) => {
-          const ranked = athletes
-            .map((a) => ({ name: a.name, v: valueFor(a.id, m) }))
-            .filter((r) => r.v != null)
-            .sort((a, b) => (m.higher_is_better ? b.v - a.v : a.v - b.v))
-            .slice(0, 5)
-          if (!ranked.length) return null
-          return (
-            <div key={m.key}>
-              <h4>
-                {m.label}
-                {m.key === 'fly' ? ' (mph)' : m.unit ? ` (${m.unit})` : ''}
-              </h4>
-              {ranked.map((r, i) => (
-                <div key={r.name}>
-                  <span>{i + 1}</span>
-                  <span>{r.name}</span>
-                  <span>{displayValue(m, r.v)}</span>
-                </div>
-              ))}
-            </div>
-          )
-        })
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+          {rankMetrics.map((m) => {
+            const ranked = athletes
+              .map((a) => ({ name: a.name, v: valueFor(a.id, m) }))
+              .filter((r) => r.v != null)
+              .sort((a, b) => (m.higher_is_better ? b.v - a.v : a.v - b.v))
+              .slice(0, 5)
+            if (!ranked.length) return null
+            return (
+              <div key={m.key} className="panel" style={{ flex: '1 1 260px', minWidth: 240 }}>
+                <p className="eyebrow" style={{ marginBottom: 10 }}>
+                  {m.label}
+                  {m.key === 'fly' ? ' (mph)' : m.unit ? ` (${m.unit})` : ''}
+                </p>
+                {ranked.map((r, i) => (
+                  <div key={r.name} style={{ display: 'flex', gap: 10, padding: '6px 0', borderBottom: i < ranked.length - 1 ? '1px solid var(--line)' : 'none' }}>
+                    <span className="sub" style={{ width: 18 }}>{i + 1}</span>
+                    <span style={{ flex: 1 }}>{r.name}</span>
+                    <span style={{ fontWeight: 800 }}>{displayValue(m, r.v)}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
       )}
       {entries.length > 0 && rankMetrics.every((m) => !athletes.some((a) => valueFor(a.id, m) != null)) && (
-        <p>No ranked values for this filter yet.</p>
+        <p className="sub">No ranked values for this filter yet.</p>
       )}
     </div>
   )

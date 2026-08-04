@@ -54,25 +54,26 @@ export function InvitePanel({ facilityId, onCreated }) {
   }
 
   return (
-    <form onSubmit={handleCreate}>
+    <form className="panel" onSubmit={handleCreate}>
+      <p className="eyebrow">Team</p>
       <h2>Invite someone</h2>
-      <label>
-        Role
+      <label className="field">
+        <span className="lab">Role</span>
         <select value={role} onChange={(e) => setRole(e.target.value)}>
           <option value="coach">Coach</option>
           <option value="athlete">Athlete</option>
         </select>
       </label>
       {role === 'athlete' && (
-        <label>
-          Athlete name
+        <label className="field">
+          <span className="lab">Athlete name</span>
           <input value={athleteName} onChange={(e) => setAthleteName(e.target.value)} />
         </label>
       )}
-      {error && <p role="alert">{error}</p>}
-      <button type="submit" disabled={submitting}>Generate invite link</button>
+      {error && <p className="error-text" role="alert">{error}</p>}
+      <button className="btn primary" type="submit" disabled={submitting}>Generate invite link</button>
       {link && (
-        <p>
+        <p className="sub">
           Share this link (expires in 14 days): <code>{link}</code>
         </p>
       )}

@@ -11,7 +11,7 @@ function Gate() {
     new URLSearchParams(window.location.search).has('invite') ? 'signup' : 'signin'
   )
 
-  if (loading) return <p>Loading…</p>
+  if (loading) return <p className="wrap sub">Loading…</p>
 
   if (!session) {
     return screen === 'signin' ? (
@@ -22,11 +22,11 @@ function Gate() {
   }
 
   if (bootstrapError) {
-    return <p role="alert">Could not finish setting up your account: {bootstrapError}</p>
+    return <p className="wrap error-text" role="alert">Could not finish setting up your account: {bootstrapError}</p>
   }
 
   if (!membership) {
-    return <p>Setting up your account…</p>
+    return <p className="wrap sub">Setting up your account…</p>
   }
 
   return <AppShell />

@@ -17,19 +17,28 @@ export function SignIn({ onSwitchToSignUp }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h1>Sign in</h1>
-      <label>
-        Email
-        <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      </label>
-      <label>
-        Password
-        <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      </label>
-      {error && <p role="alert">{error}</p>}
-      <button type="submit" disabled={submitting}>Sign in</button>
-      <button type="button" onClick={onSwitchToSignUp}>Need an account? Create one</button>
-    </form>
+    <div className="wrap" style={{ maxWidth: 420 }}>
+      <div className="brandbar login-card">
+        <div className="brandbar-left">
+          <img className="logo-s" src="/logo-s.png" alt="STS logo" />
+          <div className="name">STRENGTH THROUGH <span>SYSTEMS</span></div>
+        </div>
+      </div>
+      <form className="panel" onSubmit={handleSubmit}>
+        <p className="eyebrow">Sign In</p>
+        <h2>Welcome back</h2>
+        <label className="field">
+          <span className="lab">Email</span>
+          <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </label>
+        <label className="field">
+          <span className="lab">Password</span>
+          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </label>
+        {error && <p className="error-text" role="alert">{error}</p>}
+        <button className="btn primary" type="submit" disabled={submitting}>Sign in</button>
+        <button className="btn ghost" type="button" onClick={onSwitchToSignUp} style={{ marginTop: 10 }}>Need an account? Create one</button>
+      </form>
+    </div>
   )
 }

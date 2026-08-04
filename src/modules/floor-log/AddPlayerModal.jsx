@@ -29,33 +29,42 @@ export function AddPlayerModal({ onSave, onClose }) {
   }
 
   return (
-    <div role="dialog" aria-modal="true" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div>
-        <h3>Create Player</h3>
-        {error && <p role="alert">{error}</p>}
-        <div>
-          <label>Name</label>
+    <div className="modal-overlay" role="dialog" aria-modal="true" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="modal-panel">
+        <p className="eyebrow">Floor Log</p>
+        <h2 style={{ fontSize: 18 }}>Create Player</h2>
+        {error && <p className="error-text" role="alert">{error}</p>}
+        <label className="field">
+          <span className="lab">Name</span>
           <input autoFocus placeholder="Player name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+        </label>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <label className="field" style={{ flex: 1 }}>
+            <span className="lab">Feet</span>
+            <input type="number" min="0" max="9" placeholder="ft" value={form.feet} onChange={(e) => setForm((f) => ({ ...f, feet: e.target.value }))} />
+          </label>
+          <label className="field" style={{ flex: 1 }}>
+            <span className="lab">Inches</span>
+            <input type="number" min="0" max="11" placeholder="in" value={form.inches} onChange={(e) => setForm((f) => ({ ...f, inches: e.target.value }))} />
+          </label>
         </div>
-        <div>
-          <label>Feet</label>
-          <input type="number" min="0" max="9" placeholder="ft" value={form.feet} onChange={(e) => setForm((f) => ({ ...f, feet: e.target.value }))} />
-          <label>Inches</label>
-          <input type="number" min="0" max="11" placeholder="in" value={form.inches} onChange={(e) => setForm((f) => ({ ...f, inches: e.target.value }))} />
+        <div style={{ display: 'flex', gap: 16 }}>
+          <label className="field" style={{ flex: 1 }}>
+            <span className="lab">Sport</span>
+            <input placeholder="e.g. Football" value={form.sport} onChange={(e) => setForm((f) => ({ ...f, sport: e.target.value }))} />
+          </label>
+          <label className="field" style={{ flex: 1 }}>
+            <span className="lab">Sex</span>
+            <select value={form.sex} onChange={(e) => setForm((f) => ({ ...f, sex: e.target.value }))}>
+              <option value="">—</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </label>
         </div>
-        <div>
-          <label>Sport</label>
-          <input placeholder="e.g. Football" value={form.sport} onChange={(e) => setForm((f) => ({ ...f, sport: e.target.value }))} />
-          <label>Sex</label>
-          <select value={form.sex} onChange={(e) => setForm((f) => ({ ...f, sex: e.target.value }))}>
-            <option value="">—</option>
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-          </select>
-        </div>
-        <div>
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button type="button" onClick={handleSave} disabled={saving}>Save Player</button>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+          <button className="btn ghost" type="button" onClick={onClose}>Cancel</button>
+          <button className="btn primary" type="button" onClick={handleSave} disabled={saving}>Save Player</button>
         </div>
       </div>
     </div>

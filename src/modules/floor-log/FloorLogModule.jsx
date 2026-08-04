@@ -89,27 +89,27 @@ export function FloorLogModule() {
     }
   }
 
-  if (loading) return <p>Loading Floor Log…</p>
-  if (error) return <p role="alert">{error}</p>
+  if (loading) return <p className="sub">Loading Floor Log…</p>
+  if (error) return <p className="error-text" role="alert">{error}</p>
 
   return (
     <div>
       <h2>Floor Log</h2>
-      <p>Select a player and date — the program loads its movements. Search a movement, log set · weight · reps · tempo, hit Next Set.</p>
+      <p className="sub">Select a player and date — the program loads its movements. Search a movement, log set · weight · reps · tempo, hit Next Set.</p>
 
-      <div>
-        <label>Program</label>
-        <select value={programId} onChange={(e) => setProgramId(e.target.value)}>
-          {!programs.length && <option value="">— build or save a program first —</option>}
-          {programs.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-      </div>
+      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+        <label className="field" style={{ flex: 1, minWidth: 200, marginBottom: 0 }}>
+          <span className="lab">Program</span>
+          <select value={programId} onChange={(e) => setProgramId(e.target.value)}>
+            {!programs.length && <option value="">— build or save a program first —</option>}
+            {programs.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </label>
 
-      <div>
-        <label>Player</label>
-        <div style={{ position: 'relative', display: 'inline-block' }}>
+        <label className="field" style={{ flex: 2, minWidth: 220, marginBottom: 0, position: 'relative' }}>
+          <span className="lab">Player</span>
           <input
             placeholder="Select player…"
             autoComplete="off"
@@ -119,34 +119,38 @@ export function FloorLogModule() {
             onBlur={() => setTimeout(() => { setShowOptions(false); setQuery(playerLabel(activeAthlete)) }, 200)}
           />
           {showOptions && (
-            <div>
-              {!filteredAthletes.length && <div>No players — tap + Add Player</div>}
+            <div className="panel" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, padding: 8, maxHeight: 220, overflowY: 'auto' }}>
+              {!filteredAthletes.length && <div className="sub">No players — tap + Add Player</div>}
               {filteredAthletes.map((a) => (
-                <div key={a.id} onMouseDown={(e) => { e.preventDefault(); setShowOptions(false); addToFloor(a.id) }}>
-                  {a.name} <small>{a.height_feet != null ? `${a.height_feet}'${a.height_inches || 0}"` : 'no ht'}</small>
+                <div key={a.id} onMouseDown={(e) => { e.preventDefault(); setShowOptions(false); addToFloor(a.id) }} style={{ padding: '8px 6px', cursor: 'pointer', borderRadius: 'var(--radius)' }}>
+                  {a.name} <small className="sub">{a.height_feet != null ? `${a.height_feet}'${a.height_inches || 0}"` : 'no ht'}</small>
                 </div>
               ))}
             </div>
           )}
-        </div>
-        <button type="button" onClick={() => setShowAddPlayer(true)}>+ Add Player</button>
-        <label>Date</label>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
+
+        <button className="btn ghost" type="button" onClick={() => setShowAddPlayer(true)} style={{ alignSelf: 'flex-end' }}>+ Add Player</button>
+
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span className="lab">Date</span>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
       </div>
 
       {roster.length > 0 && (
-        <div>
+        <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           {roster.map((id) => {
             const a = athletes.find((x) => x.id === id)
             if (!a) return null
             return (
-              <span key={id} style={{ fontWeight: id === activeId ? 'bold' : 'normal' }}>
-                <button type="button" onClick={() => setActivePlayer(id)}>{a.name}</button>
-                <button type="button" onClick={() => removeFromRoster(id)} aria-label={`Remove ${a.name}`}>✕</button>
+              <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <button className="btn" aria-pressed={id === activeId} type="button" onClick={() => setActivePlayer(id)}>{a.name}</button>
+                <button className="btn ghost" type="button" onClick={() => removeFromRoster(id)} aria-label={`Remove ${a.name}`}>✕</button>
               </span>
             )
           })}
-          <button type="button" onClick={() => { setRoster([]); setActiveId(null); setQuery('') }}>Clear session</button>
+          <button className="btn ghost" type="button" onClick={() => { setRoster([]); setActiveId(null); setQuery('') }}>Clear session</button>
         </div>
       )}
 
@@ -162,9 +166,9 @@ export function FloorLogModule() {
         />
       )}
 
-      {!program && <p>No program available. Build one in Build Program (or save one) first.</p>}
-      {program && !activeAthlete && <p>Add an athlete above to start logging.</p>}
-      {program && activeAthlete && !date && <p>Pick a date.</p>}
+      {!program && <p className="sub">No program available. Build one in Build Program (or save one) first.</p>}
+      {program && !activeAthlete && <p className="sub">Add an athlete above to start logging.</p>}
+      {program && activeAthlete && !date && <p className="sub">Pick a date.</p>}
       {program && activeAthlete && date && (
         <FloorLogSession
           key={activeAthlete.id + '|' + date}

@@ -182,7 +182,7 @@ export function AttendanceModule() {
     }
   }
 
-  if (loading) return <p>Loading attendance…</p>
+  if (loading) return <p className="sub">Loading attendance…</p>
 
   const rollCallTeam = rollCall ? teams.find((t) => t.id === rollCall.teamId) : null
   const reportTeam = reportTeamId ? teams.find((t) => t.id === reportTeamId) : null
@@ -190,26 +190,30 @@ export function AttendanceModule() {
   return (
     <div>
       <h2>Attendance</h2>
-      <p>Tap a cell to take roll for that team and date.</p>
-      {error && <p role="alert">{error}</p>}
+      <p className="sub">Tap a cell to take roll for that team and date.</p>
+      {error && <p className="error-text" role="alert">{error}</p>}
 
-      <div>
-        <button type="button" onClick={handleAddTeam}>+ Team</button>
-        <button type="button" onClick={handleOpenAddDate}>+ Date</button>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        <button className="btn ghost" type="button" onClick={handleAddTeam}>+ Team</button>
+        <button className="btn ghost" type="button" onClick={handleOpenAddDate}>+ Date</button>
       </div>
 
       {showDatePicker && (
-        <div role="dialog" aria-modal="true">
-          <input type="date" value={datePickerValue} onChange={(e) => setDatePickerValue(e.target.value)} />
-          <button type="button" onClick={() => setShowDatePicker(false)}>Cancel</button>
-          <button type="button" onClick={handleConfirmAddDate}>Add date</button>
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-panel" style={{ maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <input type="date" value={datePickerValue} onChange={(e) => setDatePickerValue(e.target.value)} />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn ghost" type="button" onClick={() => setShowDatePicker(false)}>Cancel</button>
+              <button className="btn primary" type="button" onClick={handleConfirmAddDate}>Add date</button>
+            </div>
+          </div>
         </div>
       )}
 
-      {teams.length === 0 && <p>No teams yet — add one to start taking roll.</p>}
+      {teams.length === 0 && <p className="sub">No teams yet — add one to start taking roll.</p>}
 
       {teams.length > 0 && (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="panel" style={{ overflowX: 'auto' }}>
           <table>
             <thead>
               <tr>
@@ -218,14 +222,14 @@ export function AttendanceModule() {
                   c.type === 'date' ? (
                     <th key={c.date}>
                       {c.weekFirst && (
-                        <button type="button" onClick={() => collapseWeek(c.weekKey)} title="Collapse week" aria-label="Collapse week">▼</button>
+                        <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => collapseWeek(c.weekKey)} title="Collapse week" aria-label="Collapse week">▼</button>
                       )}
                       {monthName(c.date)} {dispDate(c.date)}
-                      <button type="button" onClick={() => handleDeleteDate(c.date)} aria-label={`Delete ${c.date}`}>✕</button>
+                      <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => handleDeleteDate(c.date)} aria-label={`Delete ${c.date}`}>✕</button>
                     </th>
                   ) : (
                     <th key={c.weekKey}>
-                      <button type="button" onClick={() => expandWeek(c.weekKey)}>▶ {formatWeekRange(c.dates)}</button>
+                      <button className="btn ghost" type="button" onClick={() => expandWeek(c.weekKey)}>▶ {formatWeekRange(c.dates)}</button>
                     </th>
                   )
                 )}
@@ -235,16 +239,16 @@ export function AttendanceModule() {
               {teams.map((team) => (
                 <tr key={team.id}>
                   <th>
-                    <button type="button" onClick={() => handleRenameTeam(team)}>{team.name}</button>
-                    <button type="button" onClick={() => setReportTeamId(team.id)} aria-label={`${team.name} report`}>📊</button>
-                    <button type="button" onClick={() => handleDeleteTeam(team)} aria-label={`Delete ${team.name}`}>✕</button>
+                    <button className="btn ghost" type="button" onClick={() => handleRenameTeam(team)}>{team.name}</button>
+                    <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => setReportTeamId(team.id)} aria-label={`${team.name} report`}>📊</button>
+                    <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => handleDeleteTeam(team)} aria-label={`Delete ${team.name}`}>✕</button>
                   </th>
                   {cols.map((c) => {
                     if (c.type === 'date') {
                       const cnt = presentCount(records, team.members, c.date)
                       return (
                         <td key={c.date}>
-                          <button type="button" onClick={() => setRollCall({ teamId: team.id, date: c.date })}>
+                          <button className="btn" type="button" onClick={() => setRollCall({ teamId: team.id, date: c.date })}>
                             {cnt === null ? '+' : cnt}
                           </button>
                         </td>
@@ -253,7 +257,7 @@ export function AttendanceModule() {
                     const ws = weekTeamSum(records, team.members, c.dates)
                     return (
                       <td key={c.weekKey}>
-                        <button type="button" onClick={() => expandWeek(c.weekKey)}>{ws.logged ? ws.sum : '···'}</button>
+                        <button className="btn ghost" type="button" onClick={() => expandWeek(c.weekKey)}>{ws.logged ? ws.sum : '···'}</button>
                       </td>
                     )
                   })}

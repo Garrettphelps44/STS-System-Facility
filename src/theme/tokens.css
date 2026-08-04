@@ -1,0 +1,332 @@
+/* STS brand tokens — ported from reference/reference:Index.html :root (lines 12-17). Exact values, don't approximate. */
+:root {
+  --bg: #050605;
+  --panel: #0d0f0d;
+  --panel-2: #121512;
+  --line: #1f241f;
+  --green: #13be17;
+  --green-dim: #0f8f12;
+  --white: #ffffff;
+  --muted: #8d958d;
+  --muted-2: #5d655d;
+  --gold: #e8b500;
+  --radius: 8px;
+  --hex: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  /* Visible container border — --line alone is nearly invisible against --panel */
+  --border-visible: #333d33;
+  /* Input border — matches the reference's own input styling (select/input rule) */
+  --input-border: #2c8f30;
+  --input-border-hover: #3fce43;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Public Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.eyebrow,
+.btn,
+.steplabel {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+
+/* Brand bar */
+.brandbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.brandbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brandbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.brandbar-user {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.logo-s {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+}
+.brandbar .name {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 15px;
+}
+.brandbar .name span {
+  color: var(--green);
+}
+.tagline {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 0 0 22px 46px;
+}
+
+/* Hexagon step indicator */
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0 0 28px;
+  flex-wrap: wrap;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hex {
+  width: 38px;
+  height: 38px;
+  clip-path: var(--hex);
+  background: var(--panel-2);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 15px;
+  color: var(--muted-2);
+}
+.hex.active {
+  background: var(--green);
+  color: #000;
+}
+.hex.done {
+  background: #0c2f0d;
+  color: var(--green);
+}
+.step .steplabel {
+  font-size: 10.5px;
+  color: var(--muted-2);
+  letter-spacing: 0.08em;
+  max-width: 88px;
+  line-height: 1.25;
+}
+.step.active .steplabel {
+  color: var(--white);
+}
+.step.done .steplabel {
+  color: var(--muted);
+}
+.connector {
+  width: 26px;
+  height: 2px;
+  background: var(--line);
+  margin: 0 6px;
+}
+.connector.done {
+  background: var(--green-dim);
+}
+
+/* Panel card */
+.panel {
+  background: var(--panel);
+  border: 1.5px solid var(--border-visible);
+  border-radius: var(--radius);
+  padding: 26px 24px;
+  margin-bottom: 18px;
+}
+
+/* Eyebrow label */
+.eyebrow {
+  color: var(--green);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  margin: 0 0 6px;
+}
+
+h2 {
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+.sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  margin: 0 0 22px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+/* Form fields */
+label.field {
+  display: block;
+  margin-bottom: 18px;
+}
+.field > .lab {
+  display: block;
+  font-weight: 800;
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.field > .hint {
+  color: var(--muted-2);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 11.5px;
+  margin-left: 8px;
+}
+select,
+input:not([type='checkbox']):not([type='radio']) {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1.5px solid var(--input-border);
+  color: var(--white);
+  padding: 13px 14px;
+  font-family: inherit;
+  font-size: 15px;
+  border-radius: var(--radius);
+}
+select:hover,
+input:hover {
+  border-color: var(--input-border-hover);
+}
+select:focus,
+input:focus {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+  border-color: var(--green);
+}
+input::placeholder {
+  color: var(--muted-2);
+}
+
+/* Buttons */
+.btn {
+  border: 0;
+  border-radius: var(--radius);
+  padding: 14px 26px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  background: var(--panel-2);
+  color: var(--white);
+  border: 1.5px solid var(--border-visible);
+}
+.btn:hover {
+  border-color: var(--input-border-hover);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn.primary,
+.btn[type='submit'] {
+  background: var(--green);
+  color: #000;
+  border-color: var(--green);
+}
+.btn.primary:hover,
+.btn[type='submit']:hover {
+  filter: brightness(1.08);
+}
+.btn.ghost {
+  background: transparent;
+  color: var(--white);
+  border-color: var(--border-visible);
+}
+.btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.btn[aria-pressed='true'],
+.btn[aria-current='true'] {
+  background: var(--green);
+  color: #000;
+  border-color: var(--green);
+}
+
+/* Modal overlay — shared by every role="dialog" panel in the app */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 40px 16px;
+  z-index: 100;
+}
+.modal-panel {
+  background: var(--panel);
+  border: 1.5px solid var(--border-visible);
+  border-radius: var(--radius);
+  padding: 26px 24px;
+  max-width: 640px;
+  width: 100%;
+  margin: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th,
+td {
+  border-bottom: 1px solid var(--border-visible);
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 13.5px;
+}
+th {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+}
+
+.error-text {
+  color: var(--gold);
+  border-left: 2px solid var(--gold);
+  padding-left: 10px;
+  font-size: 13.5px;
+}

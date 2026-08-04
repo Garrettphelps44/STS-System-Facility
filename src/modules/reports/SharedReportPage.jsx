@@ -31,12 +31,12 @@ export function SharedReportPage({ token }) {
     return () => { active = false }
   }, [token])
 
-  if (loading) return <p>Loading report…</p>
-  if (error) return <p role="alert">{error}</p>
+  if (loading) return <p className="wrap sub">Loading report…</p>
+  if (error) return <p className="wrap error-text" role="alert">{error}</p>
   if (!report) return null
 
   return (
-    <div>
+    <div className="wrap">
       <ReportCard report={report} onPrint={() => window.print()} />
     </div>
   )

@@ -13,12 +13,15 @@ export function ReferenceModal({ panel, onClose }) {
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={panel.title}>
-      <button type="button" onClick={onClose}>
-        Close
-      </button>
-      <h3>{panel.title}</h3>
-      <p>{panel.purpose}</p>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={panel.title}>
+      <div className="modal-panel">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+          <h2 style={{ fontSize: 18 }}>{panel.title}</h2>
+          <button className="btn ghost" type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <p className="sub">{panel.purpose}</p>
 
       {panel.blocks?.map((b, i) => {
         if (b.h) return <h4 key={i}>{b.h}</h4>
@@ -68,8 +71,9 @@ export function ReferenceModal({ panel, onClose }) {
           </tbody>
         </table>
       )}
-      {panel.defs && <p>{panel.defs}</p>}
-      {panel.note && <p>{panel.note}</p>}
+      {panel.defs && <p className="sub">{panel.defs}</p>}
+      {panel.note && <p className="sub">{panel.note}</p>}
+      </div>
     </div>
   )
 }

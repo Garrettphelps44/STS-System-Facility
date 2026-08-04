@@ -31,31 +31,35 @@ export function RollCallModal({
   }
 
   return (
-    <div role="dialog" aria-modal="true" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div>
-        <div>{team.name}</div>
-        <div>{monthName(date)} {dispDate(date)}</div>
-        <div>Present: {present} / {inSession} in session</div>
-        {error && <p role="alert">{error}</p>}
+    <div className="modal-overlay" role="dialog" aria-modal="true" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="modal-panel">
+        <p className="eyebrow" style={{ marginBottom: 2 }}>{monthName(date)} {dispDate(date)}</p>
+        <h2 style={{ fontSize: 18 }}>{team.name}</h2>
+        <p className="sub">Present: {present} / {inSession} in session</p>
+        {error && <p className="error-text" role="alert">{error}</p>}
 
-        <div>
-          <button type="button" onClick={() => onBulkSetStatus(members.map((m) => m.id), date, 'present')}>All present</button>
-          <button type="button" onClick={() => onBulkSetStatus(members.map((m) => m.id), date, 'absent')}>All absent</button>
+        <div style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
+          <button className="btn ghost" type="button" onClick={() => onBulkSetStatus(members.map((m) => m.id), date, 'present')}>All present</button>
+          <button className="btn ghost" type="button" onClick={() => onBulkSetStatus(members.map((m) => m.id), date, 'absent')}>All absent</button>
         </div>
 
         <div>
-          {members.length === 0 && <p>No players yet. Add your roster below — it carries over to every date for this team.</p>}
+          {members.length === 0 && <p className="sub">No players yet. Add your roster below — it carries over to every date for this team.</p>}
           {members.map((a) => {
             const cur = statusOf(a.id)
             const s = athleteStats(records, a.id)
             const stat = s.sessions ? `${s.pct}% season · ${s.attended}/${s.sessions}` : 'first session'
             return (
-              <div key={a.id}>
-                <div>{a.name}</div>
-                <div>{stat}</div>
-                <span>
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--line)' }}>
+                <div style={{ flex: 1 }}>
+                  <div>{a.name}</div>
+                  <div className="sub" style={{ fontSize: 12 }}>{stat}</div>
+                </div>
+                <span style={{ display: 'flex', gap: 4 }}>
                   {STATUS_ORDER.map((st) => (
                     <button
+                      className="btn"
+                      style={{ padding: '8px 12px' }}
                       key={st}
                       type="button"
                       aria-pressed={cur === st}
@@ -65,7 +69,7 @@ export function RollCallModal({
                     </button>
                   ))}
                 </span>
-                <button type="button" onClick={() => { if (window.confirm(`Remove ${a.name} from the ${team.name} team? (Their attendance history is kept.)`)) onRemoveMember(a.id) }} aria-label={`Remove ${a.name}`}>
+                <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => { if (window.confirm(`Remove ${a.name} from the ${team.name} team? (Their attendance history is kept.)`)) onRemoveMember(a.id) }} aria-label={`Remove ${a.name}`}>
                   🗑
                 </button>
               </div>
@@ -73,8 +77,9 @@ export function RollCallModal({
           })}
         </div>
 
-        <div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <input
+            style={{ flex: 1 }}
             list="attendance-athlete-list"
             placeholder="Add player (or paste comma-separated names)"
             value={newPlayer}
@@ -84,12 +89,12 @@ export function RollCallModal({
           <datalist id="attendance-athlete-list">
             {nonMembers.map((a) => <option key={a.id} value={a.name} />)}
           </datalist>
-          <button type="button" onClick={handleAddPlayers}>Add</button>
+          <button className="btn ghost" type="button" onClick={handleAddPlayers}>Add</button>
         </div>
 
-        <div>
-          <button type="button" onClick={() => onClearCell(members.map((m) => m.id), date)}>Clear this cell</button>
-          <button type="button" onClick={onClose}>Done</button>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button className="btn ghost" type="button" onClick={() => onClearCell(members.map((m) => m.id), date)}>Clear this cell</button>
+          <button className="btn primary" type="button" onClick={onClose}>Done</button>
         </div>
       </div>
     </div>

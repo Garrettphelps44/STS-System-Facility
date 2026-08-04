@@ -111,48 +111,53 @@ export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddM
   return (
     <div>
       <h2>Test Database</h2>
-      <p>Pick a test date and log values. Flying 10 auto-converts to MPH. Tap a cell to edit.</p>
+      <p className="sub">Pick a test date and log values. Flying 10 auto-converts to MPH. Tap a cell to edit.</p>
 
-      <div>
-        <label>Test date</label>
-        <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}>
-          {dateOptions.length === 0 && <option value="">— none —</option>}
-          {dateOptions.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-        <input type="date" value={newDateInput} onChange={(e) => setNewDateInput(e.target.value)} />
-        <button type="button" onClick={handleAddDate}>
+      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 16 }}>
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span className="lab">Test date</span>
+          <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}>
+            {dateOptions.length === 0 && <option value="">— none —</option>}
+            {dateOptions.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
+        <input type="date" style={{ width: 'auto' }} value={newDateInput} onChange={(e) => setNewDateInput(e.target.value)} />
+        <button className="btn ghost" type="button" onClick={handleAddDate}>
           + Add date
         </button>
-        <button type="button" onClick={handleExport} style={{ marginLeft: 'auto' }}>
+        <button className="btn ghost" type="button" onClick={handleExport} style={{ marginLeft: 'auto' }}>
           ⬇ Export CSV
         </button>
       </div>
 
-      <form onSubmit={handleAddMetric}>
-        <label>Add test</label>
-        <input
-          placeholder="Test name (e.g. Pro Agility)"
-          value={metricLabel}
-          onChange={(e) => setMetricLabel(e.target.value)}
-        />
-        <input placeholder="Unit (s, in, lb)" value={metricUnit} onChange={(e) => setMetricUnit(e.target.value)} />
-        <select value={metricHigher} onChange={(e) => setMetricHigher(e.target.value)}>
+      <form className="panel" onSubmit={handleAddMetric} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span className="lab">Add test</span>
+          <input
+            placeholder="Test name (e.g. Pro Agility)"
+            value={metricLabel}
+            onChange={(e) => setMetricLabel(e.target.value)}
+          />
+        </label>
+        <input placeholder="Unit (s, in, lb)" style={{ width: 140 }} value={metricUnit} onChange={(e) => setMetricUnit(e.target.value)} />
+        <select value={metricHigher} onChange={(e) => setMetricHigher(e.target.value)} style={{ width: 'auto' }}>
           <option value="1">Higher = better</option>
           <option value="0">Lower = better</option>
         </select>
-        <button type="submit">+ Track new test</button>
+        <button className="btn primary" type="submit">+ Track new test</button>
       </form>
-      <p>Tap the ✕ on any column to stop tracking that test.</p>
+      <p className="sub">Tap the ✕ on any column to stop tracking that test.</p>
 
       {athletes.length === 0 ? (
-        <p>Add athletes on the Roster tab first.</p>
+        <p className="sub">Add athletes on the Roster tab first.</p>
       ) : !selectedDate ? (
-        <p>Add a test date to start logging.</p>
+        <p className="sub">Add a test date to start logging.</p>
       ) : (
+        <div className="panel" style={{ overflowX: 'auto' }}>
         <table>
           <thead>
             <tr>
@@ -161,7 +166,7 @@ export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddM
                 <th key={m.key}>
                   {m.label}
                   {m.unit ? ` (${m.unit})` : ''}{' '}
-                  <span role="button" title="Stop tracking this test" onClick={() => handleStopTracking(m)}>
+                  <span role="button" style={{ cursor: 'pointer' }} title="Stop tracking this test" onClick={() => handleStopTracking(m)}>
                     ✕
                   </span>
                 </th>
@@ -190,7 +195,7 @@ export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddM
                         placeholder="—"
                         onBlur={(e) => handleCellChange(a.id, m.key, e.target.value)}
                       />
-                      {mph != null && <span> {mph.toFixed(2)} mph</span>}
+                      {mph != null && <span className="sub"> {mph.toFixed(2)} mph</span>}
                     </td>
                   )
                 })}
@@ -198,6 +203,7 @@ export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddM
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   )

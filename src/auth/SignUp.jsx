@@ -62,50 +62,68 @@ export function SignUp({ onSwitchToSignIn }) {
 
   if (pendingConfirm) {
     return (
-      <div>
-        <h1>Check your email</h1>
-        <p>
-          We sent a confirmation link to {email}. Once you confirm, sign in and
-          your {mode === 'create' ? 'facility' : 'invite'} will be set up automatically.
-        </p>
-        <button type="button" onClick={onSwitchToSignIn}>Back to sign in</button>
+      <div className="wrap" style={{ maxWidth: 420 }}>
+        <div className="brandbar login-card">
+          <div className="brandbar-left">
+            <img className="logo-s" src="/logo-s.png" alt="STS logo" />
+            <div className="name">STRENGTH THROUGH <span>SYSTEMS</span></div>
+          </div>
+        </div>
+        <div className="panel">
+          <p className="eyebrow">Almost there</p>
+          <h2>Check your email</h2>
+          <p className="sub">
+            We sent a confirmation link to {email}. Once you confirm, sign in and
+            your {mode === 'create' ? 'facility' : 'invite'} will be set up automatically.
+          </p>
+          <button className="btn ghost" type="button" onClick={onSwitchToSignIn}>Back to sign in</button>
+        </div>
       </div>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h1>Create your account</h1>
-      <div role="radiogroup" aria-label="Signup type">
-        <button type="button" aria-pressed={mode === 'create'} onClick={() => setMode('create')}>
-          Start a new facility
-        </button>
-        <button type="button" aria-pressed={mode === 'join'} onClick={() => setMode('join')}>
-          I have an invite code
-        </button>
+    <div className="wrap" style={{ maxWidth: 420 }}>
+      <div className="brandbar login-card">
+        <div className="brandbar-left">
+          <img className="logo-s" src="/logo-s.png" alt="STS logo" />
+          <div className="name">STRENGTH THROUGH <span>SYSTEMS</span></div>
+        </div>
       </div>
-      <label>
-        Email
-        <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      </label>
-      <label>
-        Password
-        <input type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      </label>
-      {mode === 'create' ? (
-        <label>
-          Facility name
-          <input required value={facilityName} onChange={(e) => setFacilityName(e.target.value)} />
+      <form className="panel" onSubmit={handleSubmit}>
+        <p className="eyebrow">New Profile</p>
+        <h2>Create your account</h2>
+        <div role="radiogroup" aria-label="Signup type" style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+          <button className="btn ghost" type="button" aria-pressed={mode === 'create'} onClick={() => setMode('create')}>
+            Start a new facility
+          </button>
+          <button className="btn ghost" type="button" aria-pressed={mode === 'join'} onClick={() => setMode('join')}>
+            I have an invite code
+          </button>
+        </div>
+        <label className="field">
+          <span className="lab">Email</span>
+          <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
-      ) : (
-        <label>
-          Invite code
-          <input required value={inviteToken} onChange={(e) => setInviteToken(e.target.value)} />
+        <label className="field">
+          <span className="lab">Password</span>
+          <input type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
-      )}
-      {error && <p role="alert">{error}</p>}
-      <button type="submit" disabled={submitting}>Create account</button>
-      <button type="button" onClick={onSwitchToSignIn}>Already have an account? Sign in</button>
-    </form>
+        {mode === 'create' ? (
+          <label className="field">
+            <span className="lab">Facility name</span>
+            <input required value={facilityName} onChange={(e) => setFacilityName(e.target.value)} />
+          </label>
+        ) : (
+          <label className="field">
+            <span className="lab">Invite code</span>
+            <input required value={inviteToken} onChange={(e) => setInviteToken(e.target.value)} />
+          </label>
+        )}
+        {error && <p className="error-text" role="alert">{error}</p>}
+        <button className="btn primary" type="submit" disabled={submitting}>Create account</button>
+        <button className="btn ghost" type="button" onClick={onSwitchToSignIn} style={{ marginTop: 10 }}>Already have an account? Sign in</button>
+      </form>
+    </div>
   )
 }

@@ -228,40 +228,40 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
     }
   }
 
-  if (loading) return <p>Loading session…</p>
-  if (!ctx) return <p role="alert">{error || 'Could not load this session.'}</p>
+  if (loading) return <p className="sub">Loading session…</p>
+  if (!ctx) return <p className="error-text" role="alert">{error || 'Could not load this session.'}</p>
 
   return (
     <div>
-      {error && <p role="alert">{error}</p>}
+      {error && <p className="error-text" role="alert">{error}</p>}
 
-      <div>
+      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start' }}>
         <div>
-          ASC{' '}
-          <b title="Athlete Strength Capacity — tap to override" onClick={handleAscClick} style={{ cursor: 'pointer', color: over ? 'crimson' : undefined }}>
+          <p className="eyebrow" style={{ marginBottom: 2 }}>ASC</p>
+          <b title="Athlete Strength Capacity — tap to override" onClick={handleAscClick} style={{ cursor: 'pointer', fontSize: 20, color: over ? 'var(--gold)' : 'var(--white)' }}>
             {ascDisp.toFixed(2)}
           </b>
         </div>
-        <div>
-          <label>PSC</label>
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span className="lab">PSC</span>
           <input
             type="number"
             step="any"
             placeholder="—"
             value={projected}
             onChange={(e) => handleProjectedChange(e.target.value)}
-            style={over ? { borderColor: 'crimson' } : undefined}
+            style={over ? { borderColor: 'var(--gold)' } : undefined}
           />
-        </div>
-        <div>
+        </label>
+        <div className="sub">
           {ctx.offday ? `Off-day session · ${date}` : `Week ${ctx.week} · ${ctx.wd} · Code ${ctx.code}`}
           <br />
           {athlete.name} · {heightLabel(athlete)}
         </div>
       </div>
 
-      {ctx.offday && <p>Not a program training day — add movements with <b>+ Next Exercise</b> to log a one-off lift.</p>}
-      {athlete.height_feet == null && <p>Set {athlete.name}'s height in the Roster (Tracker) — the Strength Capacity math needs it to compute workload.</p>}
+      {ctx.offday && <p className="sub">Not a program training day — add movements with <b>+ Next Exercise</b> to log a one-off lift.</p>}
+      {athlete.height_feet == null && <p className="sub">Set {athlete.name}'s height in the Roster (Tracker) — the Strength Capacity math needs it to compute workload.</p>}
 
       {slots.map((slot) => {
         const hasCoeff = slot.exercise && EXDB[slot.exercise] != null
@@ -272,9 +272,10 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
         slot.sets.forEach((s) => { if (s.value != null) sub += Number(s.value) })
 
         return (
-          <div key={slot.exercise_index}>
-            <div style={{ position: 'relative' }}>
+          <div key={slot.exercise_index} className="panel">
+            <div style={{ position: 'relative', display: 'flex', gap: 8, alignItems: 'center' }}>
               <input
+                style={{ flex: 1 }}
                 placeholder="Search exercise..."
                 autoComplete="off"
                 value={searching ? search.query : disp}
@@ -283,43 +284,49 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
                 onBlur={() => setTimeout(() => setSearch((s) => (s && s.exerciseIndex === slot.exercise_index ? null : s)), 200)}
               />
               {searching && (
-                <div>
+                <div className="panel" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, padding: 8, maxHeight: 220, overflowY: 'auto' }}>
                   {options.map((n) => (
-                    <div key={n} onMouseDown={(e) => { e.preventDefault(); handlePickExercise(slot, n) }}>
+                    <div key={n} onMouseDown={(e) => { e.preventDefault(); handlePickExercise(slot, n) }} style={{ padding: '8px 6px', cursor: 'pointer' }}>
                       {n.charAt(0).toUpperCase() + n.slice(1)}
                     </div>
                   ))}
                 </div>
               )}
-              <button type="button" onClick={() => handleRemoveExercise(slot)} title="Remove exercise" aria-label="Remove exercise">✕</button>
+              <button className="btn ghost" type="button" onClick={() => handleRemoveExercise(slot)} title="Remove exercise" aria-label="Remove exercise">✕</button>
             </div>
-            <div>
-              {slot.prescribed ? <>target: <b>{slot.target || ''}</b> · {slot.prescribed}</> : 'added exercise'}
-              {slot.exercise && !hasCoeff && <span> ⚠ pick a listed movement for a coefficient</span>}
-            </div>
+            <p className="sub" style={{ margin: '8px 0' }}>
+              {slot.prescribed ? <>target: <b style={{ color: 'var(--white)' }}>{slot.target || ''}</b> · {slot.prescribed}</> : 'added exercise'}
+              {slot.exercise && !hasCoeff && <span style={{ color: 'var(--gold)' }}> ⚠ pick a listed movement for a coefficient</span>}
+            </p>
 
-            <div>
-              <div><span>Set</span><span>Weight</span><span>Reps</span><span>Tempo</span><span>Value</span><span></span></div>
-              {slot.sets.map((s) => (
-                <div key={s.id}>
-                  <span>{s.set_index + 1}</span>
-                  <input type="number" step="any" inputMode="decimal" placeholder="Weight" value={s.weight ?? ''} onChange={(e) => handleFieldEdit(s, 'weight', e.target.value)} />
-                  <input type="number" step="any" inputMode="numeric" placeholder="Reps" value={s.reps ?? ''} onChange={(e) => handleFieldEdit(s, 'reps', e.target.value)} />
-                  <input type="text" inputMode="numeric" placeholder="Tempo" value={s.tempo ?? ''} onChange={(e) => handleFieldEdit(s, 'tempo', e.target.value)} />
-                  <span>{s.value != null ? Number(s.value).toFixed(2) : '—'}</span>
-                  <button type="button" onClick={() => handleNextSet(slot, s)}>Next Set</button>
-                </div>
-              ))}
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr><th>Set</th><th>Weight</th><th>Reps</th><th>Tempo</th><th>Value</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {slot.sets.map((s) => (
+                    <tr key={s.id}>
+                      <td>{s.set_index + 1}</td>
+                      <td><input type="number" step="any" inputMode="decimal" placeholder="Weight" value={s.weight ?? ''} onChange={(e) => handleFieldEdit(s, 'weight', e.target.value)} /></td>
+                      <td><input type="number" step="any" inputMode="numeric" placeholder="Reps" value={s.reps ?? ''} onChange={(e) => handleFieldEdit(s, 'reps', e.target.value)} /></td>
+                      <td><input type="text" inputMode="numeric" placeholder="Tempo" value={s.tempo ?? ''} onChange={(e) => handleFieldEdit(s, 'tempo', e.target.value)} /></td>
+                      <td>{s.value != null ? Number(s.value).toFixed(2) : '—'}</td>
+                      <td><button className="btn" type="button" onClick={() => handleNextSet(slot, s)}>Next Set</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div>exercise workload: <b>{(Math.round(sub * 100) / 100).toFixed(2)}</b></div>
+            <p className="sub" style={{ margin: '8px 0 0' }}>exercise workload: <b style={{ color: 'var(--white)' }}>{(Math.round(sub * 100) / 100).toFixed(2)}</b></p>
           </div>
         )
       })}
 
-      <button type="button" onClick={handleAddExercise}>+ Next Exercise</button>
-      <div>
-        <button type="button" onClick={handleDone}>{savedFlash ? 'Saved ✓' : 'Done'}</button>
-        <button type="button" onClick={handleCancel}>Cancel</button>
+      <button className="btn ghost" type="button" onClick={handleAddExercise}>+ Next Exercise</button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <button className="btn primary" type="button" onClick={handleDone}>{savedFlash ? 'Saved ✓' : 'Done'}</button>
+        <button className="btn ghost" type="button" onClick={handleCancel}>Cancel</button>
       </div>
     </div>
   )

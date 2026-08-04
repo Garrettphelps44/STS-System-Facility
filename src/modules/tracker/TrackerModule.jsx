@@ -78,22 +78,23 @@ export function TrackerModule() {
     await Promise.all([refreshAthletes(), refreshEntries()])
   }
 
-  if (loading) return <p>Loading roster…</p>
-  if (error) return <p role="alert">{error}</p>
+  if (loading) return <p className="sub">Loading roster…</p>
+  if (error) return <p className="error-text" role="alert">{error}</p>
 
   return (
     <div>
-      <div role="tablist">
+      <p className="eyebrow">Tracker</p>
+      <div role="tablist" style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
         {SUBTABS.map((t) => (
-          <button key={t.key} type="button" aria-current={t.key === subtab} onClick={() => setSubtab(t.key)}>
+          <button className="btn" key={t.key} type="button" aria-current={t.key === subtab} onClick={() => setSubtab(t.key)}>
             {t.label}
           </button>
         ))}
       </div>
 
-      <div>
-        <label>
-          View
+      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 16 }}>
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span className="lab">View</span>
           <select value={filter.sport} onChange={(e) => setFilter((f) => ({ ...f, sport: e.target.value }))}>
             <option value="">All sports</option>
             {sports.map((s) => (
@@ -103,12 +104,15 @@ export function TrackerModule() {
             ))}
           </select>
         </label>
-        <select value={filter.sex} onChange={(e) => setFilter((f) => ({ ...f, sex: e.target.value }))}>
-          <option value="">All athletes</option>
-          <option value="M">Male</option>
-          <option value="F">Female</option>
-        </select>
-        <span>
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span className="lab">Sex</span>
+          <select value={filter.sex} onChange={(e) => setFilter((f) => ({ ...f, sex: e.target.value }))}>
+            <option value="">All athletes</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+        </label>
+        <span className="sub">
           {filter.sport || filter.sex
             ? `Showing ${filteredAthletes.length} of ${athletes.length}`
             : `${athletes.length} athlete${athletes.length !== 1 ? 's' : ''}`}
@@ -156,7 +160,7 @@ export function TrackerModule() {
       {subtab === 'dash' && <Leaderboards athletes={filteredAthletes} metrics={metrics} entries={entries} />}
 
       <div style={{ textAlign: 'right', marginTop: '14px' }}>
-        <button type="button" onClick={handleReset}>
+        <button className="btn ghost" type="button" onClick={handleReset}>
           Reset tracker data
         </button>
       </div>

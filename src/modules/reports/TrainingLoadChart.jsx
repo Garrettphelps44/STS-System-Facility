@@ -20,33 +20,13 @@ export function TrainingLoadChart({ data }) {
     <div className="tlc-root">
       <style>{`
         .tlc-root {
-          color-scheme: light;
-          --tlc-planned: #2a78d6;
-          --tlc-actual: #eb6834;
-          --tlc-grid: #e1e0d9;
-          --tlc-axis: #c3c2b7;
-          --tlc-text-secondary: #52514e;
-          --tlc-text-muted: #898781;
-        }
-        @media (prefers-color-scheme: dark) {
-          :root:where(:not([data-theme="light"])) .tlc-root {
-            color-scheme: dark;
-            --tlc-planned: #3987e5;
-            --tlc-actual: #d95926;
-            --tlc-grid: #2c2c2a;
-            --tlc-axis: #383835;
-            --tlc-text-secondary: #c3c2b7;
-            --tlc-text-muted: #898781;
-          }
-        }
-        :root[data-theme="dark"] .tlc-root {
           color-scheme: dark;
           --tlc-planned: #3987e5;
           --tlc-actual: #d95926;
-          --tlc-grid: #2c2c2a;
-          --tlc-axis: #383835;
-          --tlc-text-secondary: #c3c2b7;
-          --tlc-text-muted: #898781;
+          --tlc-grid: var(--line);
+          --tlc-axis: var(--muted-2);
+          --tlc-text-secondary: var(--muted);
+          --tlc-text-muted: var(--muted-2);
         }
         .tlc-legend { display: flex; gap: 16px; font-size: 12px; color: var(--tlc-text-secondary); margin-bottom: 6px; }
         .tlc-legend-item { display: flex; align-items: center; gap: 6px; }

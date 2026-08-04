@@ -77,9 +77,9 @@ export function Roster({ athletes, onAdd, onUpdate, onDelete }) {
   return (
     <div>
       <h2>Roster</h2>
-      <p>One athlete record — name, height, sport, sex — shared across the app. Enter once, use everywhere.</p>
+      <p className="sub">One athlete record — name, height, sport, sex — shared across the app. Enter once, use everywhere.</p>
 
-      <form onSubmit={handleAdd}>
+      <form className="panel" onSubmit={handleAdd} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
         <input
           placeholder="Athlete name"
           value={form.name}
@@ -120,12 +120,13 @@ export function Roster({ athletes, onAdd, onUpdate, onDelete }) {
           value={form.gradYear}
           onChange={(e) => setForm((f) => ({ ...f, gradYear: e.target.value }))}
         />
-        <button type="submit" disabled={submitting}>
+        <button className="btn primary" type="submit" disabled={submitting}>
           + Add
         </button>
       </form>
-      <p>Height feeds the Strength Capacity math. Sport + sex drive the filters above.</p>
+      <p className="sub">Height feeds the Strength Capacity math. Sport + sex drive the filters above.</p>
 
+      <div className="panel" style={{ overflowX: 'auto' }}>
       <table>
         <thead>
           <tr>
@@ -140,7 +141,7 @@ export function Roster({ athletes, onAdd, onUpdate, onDelete }) {
         <tbody>
           {athletes.length === 0 && (
             <tr>
-              <td colSpan={6}>No athletes yet — add one above.</td>
+              <td className="sub" colSpan={6}>No athletes yet — add one above.</td>
             </tr>
           )}
           {athletes.map((a) =>
@@ -193,7 +194,7 @@ export function Roster({ athletes, onAdd, onUpdate, onDelete }) {
                   />
                 </td>
                 <td>
-                  <button type="button" onClick={() => saveEdit(a.id)} aria-label="Save">
+                  <button className="btn ghost" style={{ padding: '4px 8px' }} type="button" onClick={() => saveEdit(a.id)} aria-label="Save">
                     ✓
                   </button>
                 </td>
@@ -206,10 +207,10 @@ export function Roster({ athletes, onAdd, onUpdate, onDelete }) {
                 <td>{heightLabel(a)}</td>
                 <td>{a.grad_year ?? '—'}</td>
                 <td>
-                  <button type="button" onClick={() => startEdit(a)} aria-label="Edit" title="Edit">
+                  <button className="btn ghost" style={{ padding: '4px 8px' }} type="button" onClick={() => startEdit(a)} aria-label="Edit" title="Edit">
                     ✎
                   </button>
-                  <button type="button" onClick={() => handleDelete(a)} aria-label="Delete" title="Delete">
+                  <button className="btn ghost" style={{ padding: '4px 8px' }} type="button" onClick={() => handleDelete(a)} aria-label="Delete" title="Delete">
                     ✕
                   </button>
                 </td>
@@ -218,6 +219,7 @@ export function Roster({ athletes, onAdd, onUpdate, onDelete }) {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

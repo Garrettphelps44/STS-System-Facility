@@ -46,22 +46,22 @@ export function ConstraintsPage({ draft, onPatch, programs, onLoadProgram, onSav
 
   return (
     <div>
-      <section>
-        <p>00</p>
+      <section className="panel">
+        <p className="eyebrow">Step 00</p>
         <h2>Programming system</h2>
-        <p>Pick the method — it re-drives all 52 weeks</p>
+        <p className="sub">Pick the method — it re-drives all 52 weeks</p>
         {SYSFAM.map(([fam, ids]) => {
           const open = openFam === fam
           const selected = ids.includes(draft.system)
           return (
-            <div key={fam}>
-              <button type="button" aria-expanded={open} onClick={() => setOpenFam(open ? null : fam)}>
+            <div key={fam} style={{ marginBottom: 8 }}>
+              <button className="btn ghost" type="button" aria-expanded={open} onClick={() => setOpenFam(open ? null : fam)}>
                 {fam} {selected && <b>{SYS[draft.system].tag}</b>} {open ? '–' : '+'}
               </button>
               {open && (
-                <div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                   {ids.map((id) => (
-                    <button key={id} type="button" aria-pressed={draft.system === id} onClick={() => onPatch({ system: id })}>
+                    <button className="btn" key={id} type="button" aria-pressed={draft.system === id} onClick={() => onPatch({ system: id })}>
                       {SYS[id].name}
                       <br />
                       <small>{SYS[id].blurb}</small>
@@ -72,37 +72,39 @@ export function ConstraintsPage({ draft, onPatch, programs, onLoadProgram, onSav
             </div>
           )
         })}
-        <p>
+        <p className="sub">
           <b>{sys.name}.</b> {sys.intro}
         </p>
       </section>
 
-      <section>
-        <p>01</p>
+      <section className="panel">
+        <p className="eyebrow">Step 01</p>
         <h2>Time of session</h2>
-        {LENGTHS.map((m) => (
-          <button key={m} type="button" aria-pressed={draft.sessionLength === m} onClick={() => onPatch({ sessionLength: m })}>
-            {m} min
-            <br />
-            <small>{m <= 30 ? '1 block' : liftCount(m) + ' blocks'}</small>
-          </button>
-        ))}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {LENGTHS.map((m) => (
+            <button className="btn" key={m} type="button" aria-pressed={draft.sessionLength === m} onClick={() => onPatch({ sessionLength: m })}>
+              {m} min
+              <br />
+              <small>{m <= 30 ? '1 block' : liftCount(m) + ' blocks'}</small>
+            </button>
+          ))}
+        </div>
       </section>
 
-      <section>
-        <p>02</p>
+      <section className="panel">
+        <p className="eyebrow">Step 02</p>
         <h2>Equipment</h2>
-        <p>Tap what you actually have</p>
-        <div>
+        <p className="sub">Tap what you actually have</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
           {PRESETS.map((p, i) => (
-            <button key={i} type="button" onClick={() => onPatch({ equipment: equipmentFromCats(p.cats) })}>
+            <button className="btn ghost" key={i} type="button" onClick={() => onPatch({ equipment: equipmentFromCats(p.cats) })}>
               {p.l}
             </button>
           ))}
         </div>
-        <div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {EQCATS.map((c) => (
-            <button key={c.id} type="button" aria-pressed={cats.includes(c.id)} onClick={() => toggleCat(c.id)}>
+            <button className="btn" key={c.id} type="button" aria-pressed={cats.includes(c.id)} onClick={() => toggleCat(c.id)}>
               {c.l}
               <br />
               <small>{c.s}</small>
@@ -110,17 +112,17 @@ export function ConstraintsPage({ draft, onPatch, programs, onLoadProgram, onSav
           ))}
         </div>
         {!cats.length && (
-          <p>Nothing selected — the engine will fall back to bodyweight only. It never programs gear you don't have.</p>
+          <p className="sub">Nothing selected — the engine will fall back to bodyweight only. It never programs gear you don't have.</p>
         )}
-        <button type="button" onClick={() => setShowExact((s) => !s)}>
+        <button className="btn ghost" type="button" onClick={() => setShowExact((s) => !s)} style={{ marginTop: 12 }}>
           {showExact ? 'Hide exact equipment counts' : 'Exact equipment counts (optional)'}
         </button>
         {showExact && (
-          <div>
-            <p>For facilities that want to be exact — set real counts per item. Also feeds Groups below.</p>
+          <div style={{ marginTop: 12 }}>
+            <p className="sub">For facilities that want to be exact — set real counts per item. Also feeds Groups below.</p>
             {EQUIPMENT.map(([key, label]) => (
-              <label key={key}>
-                {label}
+              <label className="field" key={key}>
+                <span className="lab">{label}</span>
                 <input
                   type="number"
                   min="0"
@@ -133,15 +135,15 @@ export function ConstraintsPage({ draft, onPatch, programs, onLoadProgram, onSav
         )}
       </section>
 
-      <section>
-        <button type="button" onClick={() => setShowGroups((s) => !s)}>
+      <section className="panel">
+        <button className="btn ghost" type="button" onClick={() => setShowGroups((s) => !s)}>
           {showGroups ? 'Hide groups' : 'Groups (optional)'}
         </button>
         {showGroups && (
-          <div>
-            <p>How athletes split into lanes based on your equipment — uses the exact counts above.</p>
-            <label>
-              Max athletes training at once
+          <div style={{ marginTop: 12 }}>
+            <p className="sub">How athletes split into lanes based on your equipment — uses the exact counts above.</p>
+            <label className="field">
+              <span className="lab">Max athletes training at once</span>
               <input
                 type="number"
                 min="0"
@@ -153,11 +155,11 @@ export function ConstraintsPage({ draft, onPatch, programs, onLoadProgram, onSav
                 }}
               />
             </label>
-            <p>
+            <p className="sub">
               {maxAthletes} athletes across {lanes} lane{lanes === 1 ? '' : 's'}
             </p>
             {groups.map((g) => (
-              <p key={g.tag}>
+              <p className="sub" key={g.tag}>
                 {g.tag}: {g.count} athletes
               </p>
             ))}
@@ -165,15 +167,15 @@ export function ConstraintsPage({ draft, onPatch, programs, onLoadProgram, onSav
         )}
       </section>
 
-      <section>
-        <p>03</p>
+      <section className="panel">
+        <p className="eyebrow">Step 03</p>
         <h2>Days</h2>
-        <div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {DAYS.map((day) => {
             const st = draft.days[day]
             const ml = { lifting: 'Lift', both: 'Both', conditioning: 'Cond' }[st] || 'Off'
             return (
-              <button key={day} type="button" data-on={st ? 1 : 0} onClick={() => cycleDay(day)}>
+              <button className="btn" key={day} type="button" aria-pressed={!!st} data-on={st ? 1 : 0} onClick={() => cycleDay(day)}>
                 {day}
                 <br />
                 <small>{ml}</small>
@@ -183,54 +185,62 @@ export function ConstraintsPage({ draft, onPatch, programs, onLoadProgram, onSav
         </div>
       </section>
 
-      <section>
-        <p>04</p>
+      <section className="panel">
+        <p className="eyebrow">Step 04</p>
         <h2>Skill level</h2>
-        {SKILLS.map(([v, l, s]) => (
-          <button key={v} type="button" aria-pressed={draft.skill === v} onClick={() => onPatch({ skill: v })}>
-            {l}
-            <br />
-            <small>{s}</small>
-          </button>
-        ))}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {SKILLS.map(([v, l, s]) => (
+            <button className="btn" key={v} type="button" aria-pressed={draft.skill === v} onClick={() => onPatch({ skill: v })}>
+              {l}
+              <br />
+              <small>{s}</small>
+            </button>
+          ))}
+        </div>
       </section>
 
-      <section>
-        <p>05</p>
+      <section className="panel">
+        <p className="eyebrow">Step 05</p>
         <h2>Sport</h2>
-        {SPORTS.map((s) => (
-          <button key={s} type="button" aria-pressed={draft.sport === s} onClick={() => onPatch({ sport: s })}>
-            {s}
-          </button>
-        ))}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {SPORTS.map((s) => (
+            <button className="btn" key={s} type="button" aria-pressed={draft.sport === s} onClick={() => onPatch({ sport: s })}>
+              {s}
+            </button>
+          ))}
+        </div>
       </section>
 
-      <section>
-        <p>06</p>
+      <section className="panel">
+        <p className="eyebrow">Step 06</p>
         <h2>Program name</h2>
-        <input value={draft.name} onChange={(e) => onPatch({ name: e.target.value })} placeholder="e.g. Varsity FB Off-Season" />
+        <label className="field">
+          <input value={draft.name} onChange={(e) => onPatch({ name: e.target.value })} placeholder="e.g. Varsity FB Off-Season" />
+        </label>
         {programs.length > 0 && (
           <div>
-            <p>Saved programs — tap to load & edit</p>
-            {programs.map((p) => (
-              <button key={p.id} type="button" aria-pressed={draft.id === p.id} onClick={() => onLoadProgram(p.id)}>
-                {p.name}
-                <br />
-                <small>{SYS[p.system] ? SYS[p.system].tag : p.system}</small>
-              </button>
-            ))}
+            <p className="sub">Saved programs — tap to load & edit</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {programs.map((p) => (
+                <button className="btn" key={p.id} type="button" aria-pressed={draft.id === p.id} onClick={() => onLoadProgram(p.id)}>
+                  {p.name}
+                  <br />
+                  <small>{SYS[p.system] ? SYS[p.system].tag : p.system}</small>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </section>
 
-      <section>
-        <button type="button" onClick={() => setShowReference((s) => !s)}>
+      <section className="panel">
+        <button className="btn ghost" type="button" onClick={() => setShowReference((s) => !s)}>
           {showReference ? 'Hide reference' : 'Reference (optional)'}
         </button>
         {showReference && (
-          <div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
             {REFERENCE_PANELS.map((p) => (
-              <button key={p.key} type="button" onClick={() => setOpenRefKey(p.key)}>
+              <button className="btn ghost" key={p.key} type="button" onClick={() => setOpenRefKey(p.key)}>
                 {p.title}
               </button>
             ))}
@@ -241,12 +251,12 @@ export function ConstraintsPage({ draft, onPatch, programs, onLoadProgram, onSav
         )}
       </section>
 
-      <div>
-        <span>
+      <div className="panel" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <span className="sub">
           {sys.tag} · {draft.sessionLength} min · {activeDays.length || 'no'} day{activeDays.length === 1 ? '' : 's'} ·{' '}
           {cats.length} equipment group{cats.length === 1 ? '' : 's'} · {draft.sport}
         </span>
-        <button type="button" disabled={!activeDays.length || saving} onClick={onSaveAndBuild}>
+        <button className="btn primary" type="button" disabled={!activeDays.length || saving} onClick={onSaveAndBuild}>
           Save &amp; build
         </button>
       </div>

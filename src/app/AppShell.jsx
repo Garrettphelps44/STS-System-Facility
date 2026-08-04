@@ -31,15 +31,22 @@ export function AppShell() {
   const activeMode = visibleModes.includes(mode) ? mode : 'reports'
 
   return (
-    <div>
-      <header>
-        <span>STS Facility — signed in as {membership.role}</span>
-        <button type="button" onClick={signOut}>Sign out</button>
+    <div className="wrap">
+      <header className="brandbar">
+        <div className="brandbar-left">
+          <img className="logo-s" src="/logo-s.png" alt="STS logo" />
+          <div className="name">STRENGTH THROUGH <span>SYSTEMS</span></div>
+        </div>
+        <div className="brandbar-right">
+          <span className="brandbar-user">Signed in as {membership.role}</span>
+          <button className="btn logout ghost" type="button" onClick={signOut}>Sign out</button>
+        </div>
       </header>
 
-      <nav>
+      <nav style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '0 0 22px' }}>
         {visibleModes.map((m) => (
           <button
+            className="btn"
             key={m}
             type="button"
             aria-current={m === activeMode}

@@ -88,17 +88,17 @@ export function AssessmentModule() {
     }
   }
 
-  if (loading) return <p>Loading Assessment…</p>
-  if (error) return <p role="alert">{error}</p>
+  if (loading) return <p className="sub">Loading Assessment…</p>
+  if (error) return <p className="error-text" role="alert">{error}</p>
 
   return (
     <div>
       <h2>Assessment</h2>
-      <p>Pick a player, enter a hard-but-completable working weight for each movement, then Compute. This sets the player's PSC and lets Floor Log auto-fill it and auto-prescribe weights to hit it.</p>
+      <p className="sub">Pick a player, enter a hard-but-completable working weight for each movement, then Compute. This sets the player's PSC and lets Floor Log auto-fill it and auto-prescribe weights to hit it.</p>
 
-      <div>
-        <label>Player</label>
-        <div style={{ position: 'relative', display: 'inline-block' }}>
+      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+        <label className="field" style={{ flex: 1, minWidth: 220, marginBottom: 0, position: 'relative' }}>
+          <span className="lab">Player</span>
           <input
             placeholder="Select player…"
             autoComplete="off"
@@ -108,17 +108,17 @@ export function AssessmentModule() {
             onBlur={() => setTimeout(() => { setShowOptions(false); setQuery(playerLabel(activeAthlete)) }, 200)}
           />
           {showOptions && (
-            <div>
-              {!filteredAthletes.length && <div>No players — tap + Add Player</div>}
+            <div className="panel" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, padding: 8, maxHeight: 220, overflowY: 'auto' }}>
+              {!filteredAthletes.length && <div className="sub">No players — tap + Add Player</div>}
               {filteredAthletes.map((a) => (
-                <div key={a.id} onMouseDown={(e) => { e.preventDefault(); setShowOptions(false); setActivePlayer(a.id) }}>
-                  {a.name} <small>{a.height_feet != null ? `${a.height_feet}'${a.height_inches || 0}"` : 'no ht'}</small>
+                <div key={a.id} onMouseDown={(e) => { e.preventDefault(); setShowOptions(false); setActivePlayer(a.id) }} style={{ padding: '8px 6px', cursor: 'pointer' }}>
+                  {a.name} <small className="sub">{a.height_feet != null ? `${a.height_feet}'${a.height_inches || 0}"` : 'no ht'}</small>
                 </div>
               ))}
             </div>
           )}
-        </div>
-        <button type="button" onClick={() => setShowAddPlayer(true)}>+ Add Player</button>
+        </label>
+        <button className="btn ghost" type="button" onClick={() => setShowAddPlayer(true)} style={{ alignSelf: 'flex-end' }}>+ Add Player</button>
       </div>
 
       {showAddPlayer && (
@@ -133,19 +133,18 @@ export function AssessmentModule() {
         />
       )}
 
-      {!activeAthlete && <p>Pick a player to begin — or add one.</p>}
+      {!activeAthlete && <p className="sub">Pick a player to begin — or add one.</p>}
 
-      {activeAthlete && assessLoading && <p>Loading assessment…</p>}
+      {activeAthlete && assessLoading && <p className="sub">Loading assessment…</p>}
 
       {activeAthlete && !assessLoading && (
-        <div>
-          {activeAthlete.height_feet == null && <p>Set {activeAthlete.name}'s height in the Roster (Tracker) — the PSC math needs it.</p>}
-          <div>
-            PSC <b>{assessment?.psc != null ? Number(assessment.psc).toFixed(2) : '—'}</b>
-            <span> {activeAthlete.name} · {activeAthlete.height_feet != null ? `${activeAthlete.height_feet}'${activeAthlete.height_inches || 0}"` : 'no height'}{assessment?.assessed_on ? ` · assessed ${assessment.assessed_on}` : ''}</span>
-          </div>
+        <div className="panel">
+          {activeAthlete.height_feet == null && <p className="sub">Set {activeAthlete.name}'s height in the Roster (Tracker) — the PSC math needs it.</p>}
+          <p className="eyebrow" style={{ marginBottom: 2 }}>PSC</p>
+          <h2 style={{ marginBottom: 4 }}>{assessment?.psc != null ? Number(assessment.psc).toFixed(2) : '—'}</h2>
+          <p className="sub">{activeAthlete.name} · {activeAthlete.height_feet != null ? `${activeAthlete.height_feet}'${activeAthlete.height_inches || 0}"` : 'no height'}{assessment?.assessed_on ? ` · assessed ${assessment.assessed_on}` : ''}</p>
 
-          <table>
+          <table style={{ margin: '16px 0' }}>
             <thead>
               <tr><th>Movement</th><th>Reps</th><th>Working Weight (lbs)</th></tr>
             </thead>
@@ -170,10 +169,10 @@ export function AssessmentModule() {
             </tbody>
           </table>
 
-          {notice && <p role="alert">{notice}</p>}
-          <button type="button" onClick={handleCompute} disabled={saving}>Compute &amp; Save PSC</button>
+          {notice && <p className="error-text" role="alert">{notice}</p>}
+          <button className="btn primary" type="button" onClick={handleCompute} disabled={saving}>Compute &amp; Save PSC</button>
           {assessment?.psc != null && (
-            <p>PSC saved for <b>{activeAthlete.name}</b>: {Number(assessment.psc).toFixed(2)}. Floor Log will auto-fill this PSC and prescribe weights to hit it.</p>
+            <p className="sub" style={{ marginTop: 12 }}>PSC saved for <b style={{ color: 'var(--white)' }}>{activeAthlete.name}</b>: {Number(assessment.psc).toFixed(2)}. Floor Log will auto-fill this PSC and prescribe weights to hit it.</p>
           )}
         </div>
       )}

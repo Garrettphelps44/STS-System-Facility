@@ -34,89 +34,95 @@ export function ProgramOutputPage({ draft, programs, onLoadProgram, onNewProgram
 
   return (
     <div>
-      <div>
-        <span>
-          System <b>{sys.name}</b>
+      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+        <span className="sub">
+          System <b style={{ color: 'var(--white)' }}>{sys.name}</b>
         </span>
-        <span>
-          <b>{draft.sessionLength}</b> min
+        <span className="sub">
+          <b style={{ color: 'var(--white)' }}>{draft.sessionLength}</b> min
         </span>
-        <span>
-          <b>{activeDays.length}</b> days/wk
+        <span className="sub">
+          <b style={{ color: 'var(--white)' }}>{activeDays.length}</b> days/wk
         </span>
-        <span>
-          Skill <b>{skillLabel}</b>
+        <span className="sub">
+          Skill <b style={{ color: 'var(--white)' }}>{skillLabel}</b>
         </span>
-        <span>
-          <b>{draft.sport}</b>
+        <span className="sub">
+          <b style={{ color: 'var(--white)' }}>{draft.sport}</b>
         </span>
-        <span>
-          <b>52</b> weeks
+        <span className="sub">
+          <b style={{ color: 'var(--white)' }}>52</b> weeks
         </span>
       </div>
 
-      <button type="button" aria-expanded={methodOpen} onClick={() => setMethodOpen((o) => !o)}>
-        {sys.name} <b>{sys.tag}</b> {methodOpen ? '–' : '+'}
-      </button>
-      {methodOpen && (
-        <div>
-          <p>{sys.intro}</p>
-          <table>
-            <tbody>
-              <tr>
-                <td>Principle</td>
-                <td>{sys.layout.principle}</td>
-              </tr>
-              <tr>
-                <td>How load moves</td>
-                <td>{sys.layout.loading}</td>
-              </tr>
-              <tr>
-                <td>Exercise rotation</td>
-                <td>{sys.layout.rotation}</td>
-              </tr>
-              <tr>
-                <td>Best for</td>
-                <td>{sys.layout.bestFor}</td>
-              </tr>
-              <tr>
-                <td>Common mistake</td>
-                <td>{sys.layout.mistake}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div>
-        <span>Program</span>
-        <select value={draft.id || ''} onChange={(e) => onLoadProgram(e.target.value)}>
-          {!draft.id && <option value="">{draft.name} (unsaved)</option>}
-          {programs.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <button type="button" onClick={onNewProgram}>
-          ＋ New
+      <div className="panel">
+        <button className="btn ghost" type="button" aria-expanded={methodOpen} onClick={() => setMethodOpen((o) => !o)}>
+          {sys.name} <b>{sys.tag}</b> {methodOpen ? '–' : '+'}
         </button>
-      </div>
-      <div>
-        <span>Start</span>
-        <input type="date" value={draft.startDate || ''} onChange={(e) => onSaveStartDate(e.target.value || mondayISO())} />
+        {methodOpen && (
+          <div style={{ marginTop: 12 }}>
+            <p className="sub">{sys.intro}</p>
+            <table>
+              <tbody>
+                <tr>
+                  <td>Principle</td>
+                  <td>{sys.layout.principle}</td>
+                </tr>
+                <tr>
+                  <td>How load moves</td>
+                  <td>{sys.layout.loading}</td>
+                </tr>
+                <tr>
+                  <td>Exercise rotation</td>
+                  <td>{sys.layout.rotation}</td>
+                </tr>
+                <tr>
+                  <td>Best for</td>
+                  <td>{sys.layout.bestFor}</td>
+                </tr>
+                <tr>
+                  <td>Common mistake</td>
+                  <td>{sys.layout.mistake}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      <div>
+      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+        <label className="field" style={{ flex: 1, minWidth: 200, marginBottom: 0 }}>
+          <span className="lab">Program</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select value={draft.id || ''} onChange={(e) => onLoadProgram(e.target.value)}>
+              {!draft.id && <option value="">{draft.name} (unsaved)</option>}
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button className="btn ghost" type="button" onClick={onNewProgram}>
+              ＋ New
+            </button>
+          </div>
+        </label>
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span className="lab">Start</span>
+          <input type="date" value={draft.startDate || ''} onChange={(e) => onSaveStartDate(e.target.value || mondayISO())} />
+        </label>
+      </div>
+
+      <div className="sub" style={{ display: 'flex', gap: 16, margin: '0 0 12px' }}>
         <span>Lifting</span>
         <span>Conditioning</span>
         <span>Both</span>
       </div>
 
       {!draft.startDate ? (
-        <p>Pick a start date to build the calendar.</p>
+        <p className="sub">Pick a start date to build the calendar.</p>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="panel" style={{ overflowX: 'auto' }}>
           <table>
             <colgroup>
               <col />
@@ -143,7 +149,7 @@ export function ProgramOutputPage({ draft, programs, onLoadProgram, onNewProgram
                     ) : (
                       <td key={ci}>
                         {cell.hit ? (
-                          <button type="button" data-type={cell.hit.type} onClick={() => setOpenDateKey(cell.key)}>
+                          <button className="btn" style={{ padding: '6px 8px' }} type="button" aria-pressed={cell.key === openDateKey} data-type={cell.hit.type} onClick={() => setOpenDateKey(cell.key)}>
                             <span>{cell.day}</span>
                             <span>{cell.hit.code}</span>
                           </button>
@@ -160,7 +166,7 @@ export function ProgramOutputPage({ draft, programs, onLoadProgram, onNewProgram
         </div>
       )}
 
-      <button type="button" className="noprint" onClick={() => window.print()}>
+      <button className="btn primary" type="button" style={{ marginTop: 12 }} onClick={() => window.print()}>
         Print program
       </button>
 
