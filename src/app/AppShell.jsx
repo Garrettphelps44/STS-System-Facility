@@ -4,6 +4,7 @@ import { InvitePanel } from './InvitePanel'
 import { TrackerModule } from '../modules/tracker/TrackerModule'
 import { BuildProgramModule } from '../modules/build-program/BuildProgramModule'
 import { FloorLogModule } from '../modules/floor-log/FloorLogModule'
+import { AttendanceModule } from '../modules/attendance/AttendanceModule'
 
 const MODES = ['build', 'assess', 'att', 'floor', 'track', 'reports']
 const MODE_LABELS = {
@@ -54,6 +55,8 @@ export function AppShell() {
           <BuildProgramModule />
         ) : activeMode === 'floor' ? (
           <FloorLogModule />
+        ) : activeMode === 'att' ? (
+          <AttendanceModule />
         ) : (
           <p>{MODE_LABELS[activeMode]} — not built yet (Phase 4).</p>
         )}
