@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { InvitePanel } from './InvitePanel'
+import { TrackerModule } from '../modules/tracker/TrackerModule'
 
 const MODES = ['build', 'assess', 'att', 'floor', 'track', 'reports']
 const MODE_LABELS = {
@@ -45,7 +46,11 @@ export function AppShell() {
       </nav>
 
       <main>
-        <p>{MODE_LABELS[activeMode]} — not built yet (Phase 4).</p>
+        {activeMode === 'track' ? (
+          <TrackerModule />
+        ) : (
+          <p>{MODE_LABELS[activeMode]} — not built yet (Phase 4).</p>
+        )}
 
         {!isAthlete && <InvitePanel facilityId={membership.facilityId} />}
       </main>
