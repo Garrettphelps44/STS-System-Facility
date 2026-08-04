@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Constraints In → Program Out</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,600;0,800;1,600&family=Public+Sans:ital,wght@0,400;0,600;1,500&display=swap" rel="stylesheet">
+<style>
+  :root{--black:#000;--panel:#111;--panel2:#1a1a1a;--line:#2a2a2a;
+        --green:#13BE17;--white:#fff;--gray:#8A8A8A;--amber:#FFB020;
+        --head:'Archivo','Arial Narrow',sans-serif;--body:'Public Sans',system-ui,sans-serif}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{background:var(--black);color:var(--white);font-family:var(--body);font-size:17px;line-height:1.45}
+  h1,h2,h3,.head{font-family:var(--head);text-transform:uppercase;letter-spacing:.02em;margin:0}
+  .cap{font-family:var(--body);font-style:italic;font-weight:500;color:var(--gray);font-size:12px;
+       text-transform:uppercase;letter-spacing:.09em}
+  button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+  .top{position:sticky;top:0;z-index:20;background:var(--black);border-bottom:1px solid var(--line);
+       display:flex;align-items:center;gap:12px;padding:12px 16px;min-height:60px}
+  .mark{width:30px;height:30px;flex:0 0 auto;border-radius:50%;border:2px solid var(--green);display:grid;
+        place-items:center;font-family:var(--head);font-weight:800;color:var(--green);font-size:15px}
+  .top h1{font-size:18px;font-weight:800}
+  .top .sub{font-size:12px;color:var(--gray)}
+  .spacer{flex:1}
+  .wrap{max-width:680px;margin:0 auto;padding:16px 14px 120px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 20px;
+       border-radius:4px;font-family:var(--head);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:15px}
+  .btn.primary{background:var(--green);color:#000}
+  .btn.ghost{border:1px solid var(--line)}
+  .btn.sm{min-height:38px;font-size:12px;padding:0 12px}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;margin-bottom:10px}
+  .card h2{font-size:15px;font-weight:600}
+  .card .cap{display:block;margin-top:3px}
+  .hd{display:flex;align-items:baseline;gap:10px;margin-bottom:9px}
+  .hd .num{font-family:var(--head);font-weight:800;color:var(--green);font-size:14px}
+
+  .opts{display:flex;flex-wrap:wrap;gap:6px}
+  .opt{border:1px solid var(--line);background:var(--panel2);border-radius:4px;min-height:38px;padding:5px 10px;
+       display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:1px}
+  .opt .l{font-family:var(--head);font-weight:600;text-transform:uppercase;font-size:12px;line-height:1.1}
+  .opt .s{font-size:10px;color:var(--gray);line-height:1.1}
+  .opt[aria-pressed="true"]{border-color:var(--green);background:rgba(19,190,23,.10)}
+  .opt[aria-pressed="true"] .l{color:var(--green)}
+
+  .famhd{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);
+        background:var(--panel2);border-radius:4px;padding:9px 12px;margin-top:6px;min-height:40px}
+  .famhd .fl{font-family:var(--head);font-weight:600;text-transform:uppercase;font-size:12px;letter-spacing:.04em}
+  .famhd .fsel{margin-left:auto;font-family:var(--head);font-weight:700;font-size:11px;color:var(--green)}
+  .famhd .fcx{margin-left:auto;font-family:var(--head);font-weight:800;color:var(--green);font-size:17px;width:14px;text-align:center;line-height:1}
+  .famhd .fsel + .fcx{margin-left:8px}
+  .famhd[aria-expanded="true"]{border-color:var(--green)}
+
+  .tin{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:4px;color:var(--white);
+       font-family:var(--body);font-size:15px;padding:11px 12px;min-height:44px}
+  .tin::placeholder{color:var(--gray)}
+  .tin:focus{outline:none;border-color:var(--green)}
+  .progswitch{display:flex;align-items:center;gap:8px;margin:0 0 16px;flex-wrap:wrap}
+  .progsel{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--green);border-radius:4px;color:var(--white);
+       font-family:var(--head);font-weight:600;text-transform:uppercase;letter-spacing:.03em;font-size:13px;padding:10px 12px;min-height:44px}
+  .progsel:focus{outline:none}
+
+  .callegend{display:flex;gap:16px;align-items:center;font-family:var(--head);font-weight:700;text-transform:uppercase;
+       font-size:11px;color:var(--gray);letter-spacing:.04em;margin:0 0 8px}
+  .callegend .sw{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  .sw.clifting{background:rgba(19,190,23,.9)}
+  .sw.cconditioning{background:rgba(150,30,30,.95)}
+  .sw.cboth{background:rgba(120,150,40,.95)}
+  .wrap.wide{max-width:1160px}
+  .calwrap{border:1px solid var(--line);border-radius:6px;background:var(--panel);margin:0 0 16px;overflow:hidden}
+  .cal{border-collapse:collapse;width:100%;table-layout:fixed}
+  .cal col.lab{width:52px}
+  .cal th,.cal td{text-align:center;border:1px solid #141414;height:30px;font-size:10px;position:relative;padding:0;overflow:hidden}
+  .cal thead th{font-family:var(--head);font-weight:700;color:var(--gray);font-size:9px;height:18px}
+  .cal td.rowh,.cal th.corner{font-family:var(--head);font-weight:800;text-align:left;padding-left:6px;font-size:11px;background:var(--panel);color:#fff}
+  .cal th.corner{color:var(--green)}
+  .cal .yr{color:var(--green);font-weight:700}
+  .cal td .dn{font-size:9px;color:#5a5a5a}
+  .cal td.train{cursor:pointer;color:#fff}
+  .cal td.train .ds{position:absolute;top:0;left:2px;font-size:7px;color:rgba(255,255,255,.6);line-height:1.15}
+  .cal td.train .cd{font-family:var(--head);font-weight:800;font-size:12px;line-height:1}
+  .cal td.train.clifting{background:rgba(19,190,23,.20)} .cal td.train.clifting .cd{color:var(--green)}
+  .cal td.train.cconditioning{background:rgba(150,30,30,.34)} .cal td.train.cconditioning .cd{color:#ff7a7a}
+  .cal td.train.cboth{background:rgba(120,150,40,.26)} .cal td.train.cboth .cd{color:#c3e05a}
+  .cal td.train:hover{outline:1px solid var(--green);outline-offset:-1px}
+
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.74);display:flex;align-items:center;justify-content:center;padding:16px}
+  .modalcard{background:var(--panel);border:1px solid var(--line);border-top:2px solid var(--green);border-radius:10px;
+       width:100%;max-width:620px;max-height:86vh;overflow-y:auto;padding:14px}
+  .modalhd{display:flex;align-items:flex-start;gap:10px;position:sticky;top:-14px;background:var(--panel);
+       padding:0 0 10px;margin:0 0 6px;border-bottom:1px solid var(--line)}
+  .modalhd .mt{font-family:var(--head);font-weight:800;font-size:16px}
+  .modalhd .ms{font-size:12px;color:var(--gray);margin-top:2px}
+  .modalhd .btn{margin-left:auto}
+
+  .eqgrid{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(106px,1fr))}
+  .eq{border:1px solid var(--line);background:var(--panel2);border-radius:4px;padding:6px 8px;min-height:42px;
+      display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;text-align:left}
+  .eq .l{font-family:var(--head);font-weight:600;text-transform:uppercase;font-size:11.5px;line-height:1.1}
+  .eq .s{font-size:9.5px;color:var(--gray);line-height:1.1}
+  .eq[aria-pressed="true"]{border-color:var(--green);background:rgba(19,190,23,.10)}
+  .eq[aria-pressed="true"] .l{color:var(--green)}
+
+  .daygrid{display:flex;gap:6px;flex-wrap:wrap}
+  .daychip{flex:1 1 0;min-width:38px;border:1px solid var(--line);background:var(--panel2);border-radius:4px;
+        min-height:46px;padding:5px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+  .daychip .dn{font-family:var(--head);font-weight:700;text-transform:uppercase;font-size:12px;color:var(--gray);line-height:1}
+  .daychip .dm{font-family:var(--body);font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);line-height:1}
+  .daychip[data-on="1"]{border-color:var(--green);background:rgba(19,190,23,.10)}
+  .daychip[data-on="1"] .dn{color:var(--green)}
+  .daychip[data-on="1"] .dm{color:var(--white)}
+
+  .note{border-left:2px solid var(--green);padding:7px 0 7px 12px;font-size:14px;color:var(--gray);margin-top:9px}
+  .note b{color:var(--white)}
+  .warn{border-left-color:var(--amber)}
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--black);border-top:1px solid var(--line);
+       padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+  .bar .inner{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .bar .sum{flex:1;font-size:13px;color:var(--gray);line-height:1.3}
+
+  /* program out */
+  .sumbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .pill{border:1px solid var(--line);border-radius:100px;padding:6px 14px;font-size:13px;color:var(--gray)}
+  .pill b{color:var(--white);font-weight:600}
+  .blockhd{display:flex;align-items:center;gap:10px;margin:26px 0 10px}
+  .blockhd .ln{flex:1;height:1px;background:var(--line)}
+  .wk{border:1px solid var(--line);border-radius:6px;margin-bottom:8px;background:var(--panel);overflow:hidden}
+  .wkhd{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;text-align:left}
+  .wkhd .n{font-family:var(--head);font-weight:800;font-size:16px;width:74px}
+  .wkhd .p{flex:1;font-size:14px;color:var(--gray)}
+  .wkhd .d{font-size:13px;color:var(--gray)}
+  .wkhd[aria-expanded="true"] .n{color:var(--green)}
+  .sess{border-top:1px solid var(--line);padding:16px}
+  .sesshd{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+  .sesshd .code{font-family:var(--head);font-weight:800;color:var(--green);font-size:15px}
+  .sesshd .t{font-family:var(--head);font-weight:600;text-transform:uppercase;font-size:14px}
+  .sesshd .m{margin-left:auto;font-size:12px;color:var(--gray)}
+  .blk{border:1px solid var(--line);border-radius:5px;margin-bottom:8px;background:var(--panel2)}
+  .blk .bh{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line)}
+  .blk .bh .bl{font-family:var(--head);font-weight:600;text-transform:uppercase;font-size:12px;letter-spacing:.05em}
+  .blk .bh .bt{margin-left:auto;font-size:11px;color:var(--gray)}
+  .blk table{width:100%;border-collapse:collapse}
+  .blk td{padding:9px 12px;border-bottom:1px solid var(--line);font-size:15px;vertical-align:top}
+  .blk tr:last-child td{border-bottom:0}
+  .blk td.p{color:var(--gray);font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+      font-style:italic;width:96px;white-space:nowrap}
+  .blk td.v{text-align:right;font-family:var(--head);font-weight:700;white-space:nowrap;width:110px}
+  .blk td.v.up{color:var(--green)}
+  .ideas{padding:10px 12px;font-size:14px;color:var(--gray)}
+  .empty{border:1px dashed var(--line);border-radius:6px;padding:30px;text-align:center;color:var(--gray)}
+  @media print{.top,.bar,.noprint{display:none!important}body{background:#fff;color:#000}
+    .wk,.blk,.card{border-color:#ccc;background:#fff}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="mark">S</div>
+  <div><h1 id="ttl">Program Builder</h1><div class="sub">Constraints in → Program out</div></div>
+  <div class="spacer"></div>
+  <button class="btn ghost sm noprint" id="topBtn" style="display:none">Edit constraints</button>
+</div>
+
+<div class="wrap" id="view"></div>
+<div class="bar noprint" id="bar"></div>
+
+<script>
+/* =========================================================================
+   PAGE 1 — CONSTRAINTS.  Enter → 52 weeks.
+   Programming engine ported from simple_app.html (pools, stageFor, blocks,
+   resolveSession) so the output logic matches the existing build.
+   ========================================================================= */
+
+const EQUIPMENT=[["racks","Racks"],["barbells","Barbells"],["trapBars","Trap Bars"],["dumbbells","Dumbbells"],
+["kb","Kettlebells"],["cables","Cable Machines"],["landmine","Landmine"],["benches","Benches"],["adjBenches","Adjustable Benches"],
+["pullUpBar","Pull-Up Bar"],["plyoBoxes","Plyo Boxes"],["ghd","GHD"],["bands","Bands"],["foamRoller","Foam Roller"],
+["medBalls","Med Balls"],["sleds","Sleds"],["drags","Drags"],["field","Field"],["turf","Turf"]];
+
+/* Quick equipment categories — one tap turns on everything inside */
+const EQCATS=[
+  {id:'rack',  l:'Racks & Barbells', s:'racks · barbells',        keys:['racks','barbells']},
+  {id:'db',    l:'Dumbbells & KBs',  s:'dumbbells · kettlebells', keys:['dumbbells','kb']},
+  {id:'bench', l:'Benches',          s:'flat · adjustable',       keys:['benches','adjBenches']},
+  {id:'cable', l:'Cables & Landmine',s:'cable stacks · landmine', keys:['cables','landmine']},
+  {id:'bar',   l:'Pull-Up Bar',      s:'chin / pull-up',          keys:['pullUpBar']},
+  {id:'box',   l:'Plyo Boxes',       s:'jump boxes',              keys:['plyoBoxes']},
+  {id:'mb',    l:'Med Balls',        s:'throws · slams',          keys:['medBalls']},
+  {id:'band',  l:'Bands & Roller',   s:'bands · foam roller',     keys:['bands','foamRoller']},
+  {id:'sled',  l:'Sleds & Drags',    s:'push · drag',             keys:['sleds','drags']},
+  {id:'field', l:'Field / Turf',     s:'run space',               keys:['field','turf']},
+  {id:'spec',  l:'Specialty',        s:'trap bar · GHD',          keys:['trapBars','ghd']}
+];
+const PRESETS=[
+  {l:'Full weight room', cats:EQCATS.map(c=>c.id)},
+  {l:'Barbell room only', cats:['rack','bench','bar','spec']},
+  {l:'Dumbbells + field', cats:['db','bench','mb','field','band']},
+  {l:'Bodyweight only', cats:[]}
+];
+
+const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const SKILLS=[["none","None","0–6 mo"],["low","Low","6mo–1yr"],["med","Med","1–2 yr"],["high","High","2+ yr"]];
+const LENGTHS=[30,45,60,75,90];
+const SPORTS=["Football","Basketball","Soccer","Volleyball","Wrestling","Track & Field",
+              "Cross Country","Lacrosse","Tennis","Swimming","Golf","General Athlete"];
+const TYPES=[["lifting","Lift"],["both","Both"],["conditioning","Cond"]];
+
+/* ---- date helpers for the calendar view ---- */
+function addDays(dt,n){ const r=new Date(dt); r.setDate(r.getDate()+n); return r; }
+function fmtISO(dt){ return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+function isoToDate(iso){ const p=(iso||'').split('-').map(Number); return new Date(p[0]||2026,(p[1]||1)-1,p[2]||1); }
+function mondayISO(){ const t=new Date(); return fmtISO(addDays(t,-((t.getDay()+6)%7))); }
+const MON3=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const CAL_WDL=['M','T','W','T','F','S','S'];
+
+/* ---- config (replaces `state` from the source app) ---- */
+const C={
+  name:'Program 1',
+  start:mondayISO(),
+  system:'sts',
+  sessionLength:60,
+  cats:['rack','db','bench','cable','bar','box','mb','band'],
+  equipment:{},
+  days:{Mon:'lifting',Tue:'lifting',Thu:'lifting',Fri:'lifting'},
+  skill:'med',
+  sport:'General Athlete'
+};
+function syncEquipment(){
+  C.equipment=Object.fromEntries(EQUIPMENT.map(e=>[e[0],0]));
+  C.cats.forEach(id=>{ const c=EQCATS.find(x=>x.id===id); if(c) c.keys.forEach(k=>C.equipment[k]=1); });
+}
+syncEquipment();
+
+/* =========================== ENGINE (ported) =========================== */
+const POOL={
+  mainStrength:[
+    {n:"Back Squat",s:["4x2 1000"],req:["racks","barbells"]},
+    {n:"Front Squat",s:["4x2 1000"],req:["racks","barbells"]},
+    {n:"Trap Bar Deadlift",s:["4x2 1000"],req:["trapBars"]},
+    {n:"Conventional Deadlift",s:["4x2 1000"],req:["barbells"]},
+    {n:"BB RDL",s:["6x3 1000"],req:["barbells"]},
+    {n:"DB RDL",s:["4x6 2000"],req:["dumbbells"]}
+  ],
+  main2Strength:[
+    {n:"DB Bench Press",s:["3x6 2000"],req:["dumbbells"]},
+    {n:"Floor Press",s:["3x6 1120"],req:["dumbbells"]},
+    {n:"Seated DB Overhead Press",s:["3x5 1221"],req:["dumbbells"]},
+    {n:"Half Kneeling Cable Row",s:["3x8 1121"],req:["cables"]},
+    {n:"Pull Up",s:["3x5 2010"],req:["pullUpBar"]},
+    {n:"Landmine Press",s:["3x6 2010"],req:["landmine"]}
+  ],
+  power:[
+    {n:"Vertical Jump",s:["3x3 1000"],req:[]},
+    {n:"Box Jumps Double Jump",s:["3x3 1000"],req:["plyoBoxes"]},
+    {n:"Broad Jump Hard Landing",s:["3x3 1000"],req:[]},
+    {n:"SL Bounds",s:["3x3 1000"],req:[]},
+    {n:"High Hip Hang Power Clean",s:["3x2"],req:["barbells"]}
+  ],
+  accStrength:[
+    {n:"Long Gate Contralateral Stationary Lunge",s:["4x6 2010"],req:[]},
+    {n:"Short Gate Contralateral FFESS",s:["4x8 2002"],req:[]},
+    {n:"Short Gate Contralateral RFESS",s:["4x8 2100"],req:[]},
+    {n:"Single Leg DB RDL",s:["4x8 2100"],req:["dumbbells"]},
+    {n:"Standing B Stance Cable SA Row",s:["3x6 1121"],req:["cables"]},
+    {n:"Cable Tricep Extensions",s:["3x10 1020"],req:["cables"]}
+  ],
+  throws:[
+    {n:"Facing Bilateral MB Toss",s:["3x3 1000"],req:["medBalls"]},
+    {n:"Side B Stance MB Toss",s:["3x3 1000"],req:["medBalls"]},
+    {n:"Med Ball Slams",s:["3x3 1000"],req:["medBalls"]},
+    {n:"Step Through Med Ball Shot Put",s:["3x3 1000"],req:["medBalls"]},
+    {n:"Half Kneeling OH MB Toss",s:["3x3 1000"],req:["medBalls"]}
+  ],
+  durability:[
+    {n:"Single Arm OH Carries",s:["3x45 1000"],req:["dumbbells","kb"]},
+    {n:"Standing Pallof Press Holds",s:["3x20 1000"],req:["cables"]},
+    {n:"GHD Hold",s:["3x20 1000"],req:["ghd"]}
+  ],
+  mobility:[
+    {n:"Thread the Needle",s:["3x6 1200"],req:[]},
+    {n:"Open Books",s:["3x6 1200"],req:[]},
+    {n:"Foam Roller Extension",s:["3x10 1000"],req:["foamRoller"]},
+    {n:"Cat / Cows",s:["3x6 3232"],req:[]},
+    {n:"Pigeon Pose",s:["3x15 1000"],req:[]},
+    {n:"Downward Dog",s:["3x5 1200"],req:[]}
+  ],
+  arms:[
+    {n:"Cable Incline Bicep Curl",s:["2x10 2010"],req:["cables"]},
+    {n:"B Stance High Cable Bicep Curl",s:["3x10 2121"],req:["cables"]},
+    {n:"Cable Tricep Extensions",s:["3x10 1020"],req:["cables"]},
+    {n:"Single Arm OH Tricep Extension",s:["2x10 1020"],req:["dumbbells"]},
+    {n:"Supported Preacher Bicep Curl",s:["3x5 1020"],req:["dumbbells"]},
+    {n:"Rolling Triceps",s:["3x8 2000"],req:["dumbbells"]},
+    {n:"Diamond Push-Ups",s:["3x6 2010"],req:[]},
+    {n:"Banded Triceps Pushdown",s:["3x12 2010"],req:["bands"]},
+    {n:"Bench Dips",s:["3x8 2000"],req:["benches"]}
+  ],
+  core:[
+    {n:"Dead Bugs",s:["2x10 3131"],req:[]},
+    {n:"Bird Dogs",s:["2x15 3131"],req:[]},
+    {n:"Hollow Holds",s:["3x15 1000"],req:[]},
+    {n:"Standing Pallof Press Holds",s:["3x20 1000"],req:["cables"]}
+  ],
+  mainBW:[
+    {n:"Tempo Bodyweight Squat",s:["4x6 3030"],req:[]},
+    {n:"Single-Leg Squat to Box",s:["3x6 2010"],req:["plyoBoxes"]},
+    {n:"Nordic Hamstring Curl",s:["3x4 4000"],req:[]},
+    {n:"Reverse Lunge",s:["4x8 2010"],req:[]},
+    {n:"Feet-Elevated Push Ups",s:["3x6 2100"],req:[]}
+  ],
+  coordination:[
+    {n:"Facing Bilateral Two Hand Catch",s:["2x5"],req:[]},
+    {n:"Facing B Stance Right Hand Catch",s:["2x5"],req:[]},
+    {n:"Facing Single Leg Two Hand Catch",s:["2x5"],req:[]},
+    {n:"Partner Pass Side to Side Tennis Ball",s:["2x5"],req:[]}
+  ]
+};
+const CORE4=[
+  {anchor:"Walking Hip Airplane",sub:["Adductor Rolling","90/90 Over Back Knee","Figure 4 Stretch","Pigeon Pose","Cobra Pose","Half Kneeling Lateral Lunge"]},
+  {anchor:"Lat Pullover",sub:["Side Lying Banded ER","90/90 Banded ER","Downward Dog","KB Waiter Carries","Cat/Cow","Foam Roller Extensions"]},
+  {anchor:"Dips",sub:["Banded Shoulder IR","90/90 Shoulder IR","Knee Bent Dips","Crab Pose","Straight Leg Raise Ups"]},
+  {anchor:"Standing Windmill",sub:["Thread the Needle","Open Books","90/90 Thoracic Rotation","Frog Pose with Rotation","MB Rotation"]}
+];
+const CONDITIONING=[
+  {n:"Build Up Sprints",req:["field","turf"]},{n:"Sled Pushes",req:["sleds"]},{n:"Sled Drags",req:["drags"]},
+  {n:"Banded Resisted Sprints",req:["bands"]},{n:"A-Skips",req:[]},{n:"5-10-5 Relays",req:[]},
+  {n:"MB Sprints",req:["medBalls"]},{n:"200m Repeats",req:["field","turf"]}
+];
+
+const T1={main:"mainStrength",acc:["power","throws","mobility"],label:"Training 1"};
+const T2={main:"main2Strength",acc:["accStrength","durability","mobility"],label:"Training 2"};
+const ACC_LABEL={power:"Power",throws:"Throws",mobility:"Mobility",accStrength:"Strength",durability:"Durability"};
+const LIGHT_POOLS=["arms","core","mobility"];
+const LIGHT_LABEL={arms:"Arms",core:"Core",mobility:"Stretch"};
+
+/* =========================================================================
+   PROGRAMMING SYSTEMS
+   Each system re-drives the 52-week output: how the main lift loads week to
+   week, how phases are named/segmented, and how often exercises rotate.
+   STS Volume Accumulation is the default. Role-based systems (Conjugate,
+   Texas, Tier) reassign what each training day IS.
+   ========================================================================= */
+const THIRDS=(l)=>[[1,20,l+' 1'],[21,40,l+' 2'],[41,52,l+' 3']];
+const ph4=(w)=>Math.floor(((w-1)%20)/4);          /* 0..4 phase inside a 20-wk block */
+const meso3=(w)=>Math.min(Math.floor((w-1)/20),2);/* 0,1,2 macro block */
+
+const SYSFAM=[
+  ['Volume & consistency',['sts']],
+  ['Linear',['linear','reverse']],
+  ['Undulating',['dup','wup']],
+  ['Concentrated / block',['block','triphasic','conjugate']],
+  ['Percentage & wave',['fivethreeone','texas','tier']],
+  ['Effort & feedback',['apre','vbt','hit','gvt']],
+  ['Power & mixed',['contrast','concurrent']]
+];
+
+const SYS={
+  /* -------- Garrett's own model (DEFAULT) -------- */
+  sts:{
+    name:"The Anchor Method", tag:"ANCH", blurb:"Your model — anchor the movement, pile the volume",
+    intro:"Same main lift holds the full 20-week block — sets climb every 4 weeks, then reps up to 5. Exercises rotate only at a new block.",
+    rotate:20, seg:()=>[[1,20,'Block 1'],[21,40,'Block 2'],[41,52,'Block 3']],
+    phase:(w)=>['Set Build I','Set Build II','Set Build III','Rep Build I','Rep Build II'][ph4(w)],
+    main:(w,p)=>{ const ph=ph4(w); let sets,reps;
+      if(ph<=2){sets=p.S0+ph;reps=3;} else {sets=p.S0+2;reps=Math.min(3+(ph-2),5);}
+      return {vol:`${sets}x${reps}${p.rest}`, prog:true}; },
+    layout:{
+      principle:"Volume is the top variable. Pick the right movements and stay on them long enough to actually adapt.",
+      loading:"Sets climb every 4 weeks, then reps up to 5. Same main lift the whole 20-week block.",
+      rotation:"Main lifts rotate only at a new block (wk 21, 41). Accessories rotate freely.",
+      bestFor:"Developing athletes who need mastery and steady overload — not novelty.",
+      mistake:"Swapping the main lift every few weeks and never accumulating enough volume to grow."}
+  },
+
+  /* -------- Linear family -------- */
+  linear:{
+    name:"Linear (Classic Western)", tag:"LIN", blurb:"High volume down to high intensity",
+    intro:"Reps fall and load rises across each 20-week macrocycle — one long climb to a single peak.",
+    rotate:20, seg:()=>THIRDS('Macrocycle'),
+    phase:(w)=>['Hypertrophy','Strength-Endurance','Basic Strength','Max Strength','Peak'][ph4(w)],
+    main:(w)=>{ const t=[['4x10','65%'],['4x8','70%'],['5x5','78%'],['4x3','85%'],['3x2','92%']][ph4(w)];
+      return {vol:`${t[0]} · ${t[1]}`, prog:true}; },
+    layout:{
+      principle:"One long climb: high volume / low intensity down to low volume / high intensity.",
+      loading:"Reps fall and load rises each 4-week phase — 4x10 → 4x8 → 5x5 → 4x3 → 3x2.",
+      rotation:"Same main lifts all cycle; only the rep/load bracket changes.",
+      bestFor:"Off-season base into a single peak. Simple to run and coach.",
+      mistake:"Peaking too early and grinding heavy singles for weeks with no fresh base under them."}
+  },
+  reverse:{
+    name:"Reverse Linear", tag:"REV", blurb:"Start heavy, finish high-volume",
+    intro:"The classic model run backward — start heavy, walk toward high-volume work capacity.",
+    rotate:20, seg:()=>THIRDS('Macrocycle'),
+    phase:(w)=>['Max Strength','Strength','Strength-Hypertrophy','Hypertrophy','Work Capacity'][ph4(w)],
+    main:(w)=>{ const t=[['3x3','88%'],['4x5','82%'],['4x6','76%'],['4x8','70%'],['4x12','60%']][ph4(w)];
+      return {vol:`${t[0]} · ${t[1]}`, prog:true}; },
+    layout:{
+      principle:"Run the classic model in reverse — open strong, end on volume.",
+      loading:"Load falls and reps rise each phase — 3x3 → 4x5 → 4x6 → 4x8 → 4x12.",
+      rotation:"Same main lifts; the bracket walks from strength toward hypertrophy / work capacity.",
+      bestFor:"Coming off a peak, building size or a conditioning base, or an endurance end-goal.",
+      mistake:"Using it when the athlete actually needs to get stronger — this cycle ends light."}
+  },
+
+  /* -------- Undulating family -------- */
+  dup:{
+    name:"Daily Undulating (DUP)", tag:"DUP", blurb:"Every session a different quality",
+    intro:"Every session trains a different quality — size, strength, speed — on the same main lift.",
+    rotate:20, seg:()=>THIRDS('Mesocycle'), phase:()=>'Daily undulation',
+    main:(w,p,o)=>{ const f=[['Hypertrophy','4x8','70%'],['Strength','5x4','83%'],['Power','6x3','60% fast']][(o.dayIndex||0)%3];
+      return {vol:`${f[1]} · ${f[2]}`, prog:true, tag:f[0]}; },
+    layout:{
+      principle:"Undulate the stimulus daily so you train size, strength, and speed every week.",
+      loading:"Each session has a job — hypertrophy (4x8), strength (5x4), power (6x3 fast).",
+      rotation:"Same main lift; the rep/load target rotates by day, not by month.",
+      bestFor:"Intermediates who plateau on one quality and can train 3+ days a week.",
+      mistake:"Grinding the power day heavy — speed day stays fast and submaximal."}
+  },
+  wup:{
+    name:"Weekly Undulating (WUP)", tag:"WUP", blurb:"Focus rotates week to week",
+    intro:"The training focus rotates week to week on a 3-week loop.",
+    rotate:20, seg:()=>THIRDS('Mesocycle'),
+    phase:(w)=>['Hypertrophy week','Strength week','Power week'][(w-1)%3],
+    main:(w)=>{ const t=[['Hypertrophy','4x8','72%'],['Strength','5x4','84%'],['Power','6x3','62% fast']][(w-1)%3];
+      return {vol:`${t[1]} · ${t[2]}`, prog:true, tag:t[0]}; },
+    layout:{
+      principle:"Same idea as DUP, but the quality rotates week to week instead of day to day.",
+      loading:"Wk A hypertrophy (4x8) → Wk B strength (5x4) → Wk C power (6x3), repeat.",
+      rotation:"Same main lift; the weekly focus cycles on a 3-week loop.",
+      bestFor:"Athletes who only hit each pattern 1–2x/week but still want variety.",
+      mistake:"Forgetting to add load across loops — the loop is the shape; overload is the driver."}
+  },
+
+  /* -------- Concentrated / block family -------- */
+  block:{
+    name:"Block Periodization (Issurin)", tag:"BLK", blurb:"Accumulate · transmute · realize",
+    intro:"One quality at a time — accumulate, transmute, realize — then repeat, more specific each cycle.",
+    rotate:12, seg:()=>[[1,12,'Cycle 1'],[13,24,'Cycle 2'],[25,36,'Cycle 3'],[37,48,'Cycle 4'],[49,52,'Cycle 5']],
+    phase:(w)=>{ const c=(w-1)%12; return c<5?'Accumulation':c<9?'Transmutation':'Realization'; },
+    main:(w)=>{ const c=(w-1)%12;
+      if(c<5) return {vol:'4x8 · 70%', prog:true, tag:'Accumulation'};
+      if(c<9) return {vol:'5x4 · 83%', prog:true, tag:'Transmutation'};
+      return {vol:'3x2 · 90%', prog:true, tag:'Realization'}; },
+    layout:{
+      principle:"Concentrate one quality at a time so it actually moves, then transmute it to the sport.",
+      loading:"Accumulation (4x8 volume) → Transmutation (5x4 heavier) → Realization (3x2 peak).",
+      rotation:"Exercises get more specific each cycle — general work early, competition-like late.",
+      bestFor:"Advanced athletes peaking for a date, or a clean off-season → in-season timeline.",
+      mistake:"Blocks too long — residuals fade and you lose the quality you built two blocks back."}
+  },
+  triphasic:{
+    name:"Triphasic (Cal Dietz)", tag:"TRI", blurb:"Eccentric · isometric · concentric",
+    intro:"Same lift, changing action — slow eccentric, then isometric hold, then explosive concentric.",
+    rotate:6, seg:()=>THIRDS('Triphasic Cycle'),
+    phase:(w)=>['Eccentric','Isometric','Concentric'][Math.floor(((w-1)%6)/2)]+' phase',
+    main:(w)=>{ const c=Math.floor(((w-1)%6)/2);
+      const t=[['Eccentric','5x3 · 80% · 6s ecc'],['Isometric','5x3 · 80% · 3s iso'],['Concentric','5x3 · 80% · explode']][c];
+      return {vol:t[1], prog:true, tag:t[0]}; },
+    layout:{
+      principle:"Every movement has three actions — train them one at a time to build the stretch-shortening cycle.",
+      loading:"Eccentric (6-sec lower) → Isometric (3-sec hold) → Concentric (explode), ~2 wks each at 80%+.",
+      rotation:"Same main lift; the tempo / muscle action is what changes across the cycle.",
+      bestFor:"Explosive, injury-resistant athletes who need force absorption — not just push.",
+      mistake:"Rushing the eccentric/iso work — the slow tempo IS the training, not a warm-up rep."}
+  },
+  conjugate:{
+    name:"Conjugate (Westside)", tag:"CONJ", blurb:"Max-effort + dynamic-effort, year-round",
+    intro:"Max-effort and dynamic-effort days run side by side, year-round, with rotating lifts.",
+    rotate:3, roles:['ME · Lower','ME · Upper','DE · Lower','DE · Upper'],
+    mainPoolFor:(r)=>r.includes('Lower')?'mainStrength':'main2Strength',
+    seg:()=>THIRDS('Rotation Block'),
+    phase:(w)=>`DE wave · ${[50,55,60][(w-1)%3]}%`,
+    main:(w,p,o)=>{ const pct=[50,55,60][(w-1)%3];
+      if((o.role||'').startsWith('ME')) return {vol:'Work up to 1–3RM', prog:true, tag:'Max Effort'};
+      const lower=(o.role||'').includes('Lower');
+      return {vol:lower?`10x2 · ${pct}%`:`9x3 · ${pct}%`, prog:true, tag:'Dynamic Effort'}; },
+    layout:{
+      principle:"Develop max strength, speed-strength, and mass at the same time, year-round.",
+      loading:"ME days work to a 1–3RM; DE days move 50–60% fast on a 3-week wave; accessories chase weak points.",
+      rotation:"Max-effort lift rotates every ~3 weeks to dodge accommodation; speed lift holds the wave.",
+      bestFor:"Advanced lifters who stall on straight percentages and need constant variation.",
+      mistake:"Maxing the same lift weekly — the rotation is what keeps ME days from wrecking you."}
+  },
+
+  /* -------- Percentage & wave family -------- */
+  fivethreeone:{
+    name:"5/3/1 (Wendler)", tag:"531", blurb:"TM waves with an AMRAP top set",
+    intro:"Percentage waves off a Training Max — 5s, 3s, 5/3/1, deload — with an AMRAP top set. TM, not true 1RM.",
+    rotate:52, seg:()=>[[1,20,'Cycles 1–5'],[21,40,'Cycles 6–10'],[41,52,'Cycles 11–13']],
+    phase:(w)=>['5s week','3s week','5/3/1 week','Deload'][(w-1)%4],
+    main:(w)=>{ const t=[['65/75/85%','×5/5/5+',true],['70/80/90%','×3/3/3+',true],['75/85/95%','×5/3/1+',true],['40/50/60%','×5/5/5',false]][(w-1)%4];
+      return {vol:`${t[0]} ${t[1]}`, prog:t[2], tag:['5s','3s','5/3/1','Deload'][(w-1)%4]}; },
+    layout:{
+      principle:"Slow, sustainable percentage waves off a Training Max — not your true max.",
+      loading:"4-wk wave — 5s (65/75/85), 3s (70/80/90), 5/3/1 (75/85/95), deload — top set is AMRAP.",
+      rotation:"The four main lifts never rotate; assistance does. +5 lb upper / +10 lb lower to the TM each cycle.",
+      bestFor:"Intermediates past newbie gains who want years of progress, not months.",
+      mistake:"Using your real 1RM as the TM and skipping deloads — both stall it fast."}
+  },
+  texas:{
+    name:"Texas Method", tag:"TX", blurb:"Volume · recovery · weekly PR",
+    intro:"Volume, recovery, and a weekly PR — three roles, one climbing top set.",
+    rotate:20, roles:['Volume','Light','Intensity'], mainPoolFor:()=>'mainStrength',
+    seg:()=>THIRDS('Progression Block'), phase:()=>'Weekly PR cycle',
+    main:(w,p,o)=>{ const r=o.role||'Volume';
+      if(r==='Volume') return {vol:'5x5 · 80%', prog:true, tag:'Volume Day'};
+      if(r==='Light')  return {vol:'2x5 · 65%', prog:false, tag:'Recovery Day'};
+      return {vol:'1x5 · new PR', prog:true, tag:'Intensity Day'}; },
+    layout:{
+      principle:"One big volume stimulus, one recovery, one PR — every week.",
+      loading:"Volume day 5x5, light day 2x5, intensity day 1x5 for a weekly rep PR.",
+      rotation:"Same lifts; you push a new top-set PR each intensity day.",
+      bestFor:"Late-novice / early-intermediate lifters training 3x a week.",
+      mistake:"Turning the light day heavy — it exists so the intensity day can PR."}
+  },
+  tier:{
+    name:"Tier System (Joe Kenn)", tag:"TIER", blurb:"Total-body, rotating emphasis",
+    intro:"Total-body every session with a rotating Total / Lower / Upper emphasis and T1–T3 tiers.",
+    rotate:20, roles:['Total','Lower','Upper'],
+    mainPoolFor:(r,w)=>r==='Lower'?'mainStrength':r==='Upper'?'main2Strength':((w%2)?'mainStrength':'main2Strength'),
+    seg:()=>THIRDS('Tier Block'), phase:()=>'Total · Lower · Upper',
+    main:(w,p,o)=>{ const r=o.role||'Total';
+      const t={Total:['4x4 · 82%','T1 Total'],Lower:['5x3 · 85%','T1 Lower'],Upper:['4x5 · 80%','T1 Upper']}[r];
+      return {vol:t[0], prog:true, tag:t[1]}; },
+    layout:{
+      principle:"Train movements, not body parts. Every session is total-body with a rotating emphasis.",
+      loading:"T1 primary (heavy, low reps) → T2 secondary (moderate) → T3 accessory (high reps).",
+      rotation:"Daily emphasis rotates Total → Lower → Upper so every quality gets hit each week.",
+      bestFor:"Team-sport athletes on limited days who need the whole body trained each session.",
+      mistake:"Treating T3 like junk — it's where you build armor and cover weak links."}
+  },
+
+  /* -------- Effort & feedback family -------- */
+  apre:{
+    name:"Autoregulated / RPE (APRE)", tag:"RPE", blurb:"Load set by performance",
+    intro:"Load autoregulates off performance — build to a target RPE, then adjust off bar speed and reps left.",
+    rotate:20, seg:()=>THIRDS('Mesocycle'),
+    phase:(w)=>`Target RPE ${[7,7.5,8,8.5,9][ph4(w)]}`,
+    main:(w)=>({vol:`4x5 → top set @ RPE ${[7,7.5,8,8.5,9][ph4(w)]}`, prog:true, tag:'Autoregulated'}),
+    layout:{
+      principle:"Let the athlete's performance set the load. Autoregulate off reps and effort.",
+      loading:"Build to a top set at a target RPE; adjust the next set off bar speed and reps in reserve.",
+      rotation:"Same main lift; the RPE ceiling climbs across phases (7 → 9).",
+      bestFor:"Athletes with day-to-day readiness swings — in-season, high schoolers, big rosters.",
+      mistake:"Chasing RPE 10 every day — leave 1–2 reps in the tank or fatigue buries the signal."}
+  },
+  vbt:{
+    name:"Velocity-Based (VBT)", tag:"VBT", blurb:"Bar speed sets the load",
+    intro:"Bar speed sets the load — train a velocity zone and cap the set on velocity loss. Built for your Vitruve setup.",
+    rotate:20, seg:()=>THIRDS('Velocity Block'),
+    phase:(w)=>['Strength','Strength','Speed-Strength','Speed-Strength','Speed'][ph4(w)]+' zone',
+    main:(w)=>{ const z=[['0.55–0.70 m/s','15% VL'],['0.60–0.75 m/s','15% VL'],['0.70–0.85 m/s','20% VL'],['0.80–1.0 m/s','20% VL'],['1.0+ m/s','10% VL']][ph4(w)];
+      return {vol:`6x3 · ${z[0]} · stop @ ${z[1]}`, prog:true, tag:'Velocity'}; },
+    layout:{
+      principle:"Bar speed sets the load. Train the velocity zone that matches the goal.",
+      loading:"Strength zones (0.55–0.75 m/s) early, speed-strength (0.8–1.0+) later; stop the set on a velocity drop.",
+      rotation:"Same main lift; the velocity target and velocity-loss cutoff shift by phase.",
+      bestFor:"Programs with a VBT setup that want autoregulated, fatigue-capped loading.",
+      mistake:"Ignoring the velocity-loss stop and grinding slow reps — the opposite of the point."}
+  },
+  hit:{
+    name:"HIT (High Intensity)", tag:"HIT", blurb:"One hard set, brief and infrequent",
+    intro:"Brief and hard — one all-out set per movement, add load when you beat the top rep.",
+    rotate:20, seg:()=>THIRDS('Block'), phase:()=>'To failure',
+    main:()=>({vol:'1–2x6–10 to failure · 4010 tempo', prog:true, tag:'To failure'}),
+    layout:{
+      principle:"Brief, hard, infrequent. One all-out set drives the adaptation.",
+      loading:"1–2 sets to true failure, controlled tempo; add load once you beat the top rep.",
+      rotation:"Same lifts; progress by load or reps, never by piling on sets.",
+      bestFor:"Time-crunched athletes or in-season maintenance on minimal volume.",
+      mistake:"Adding 'a few more sets' — the model rests on the one set being genuinely maximal."}
+  },
+  gvt:{
+    name:"German Volume (10x10)", tag:"GVT", blurb:"Ten sets of ten for size",
+    intro:"Ten sets of ten at a fixed load — overwhelming volume drives the growth.",
+    rotate:20, seg:()=>[[1,20,'GVT 10x10'],[21,40,'GVT 10x8'],[41,52,'GVT 10x6']],
+    phase:(w)=>['10x10 @60%','10x8 @65%','10x6 @70%'][meso3(w)],
+    main:(w)=>{ const t=[['10x10','60%'],['10x8','65%'],['10x6','70%']][meso3(w)];
+      return {vol:`${t[0]} · ${t[1]}`, prog:true, tag:'German Volume'}; },
+    layout:{
+      principle:"Ten sets of ten. Overwhelming volume at a fixed load drives hypertrophy.",
+      loading:"10x10 at ~60%, same weight all sets; add load once you hit all 100 reps. Advance to 10x8, 10x6.",
+      rotation:"Same main lift per block; secondary work stays light and simple.",
+      bestFor:"A dedicated mass phase — off-season size before a strength/power block.",
+      mistake:"Starting too heavy — if you can't finish 100 reps, the load was wrong."}
+  },
+
+  /* -------- Power & mixed family -------- */
+  contrast:{
+    name:"French Contrast (PAP)", tag:"FC", blurb:"Heavy + explosive clusters",
+    intro:"Heavy and explosive paired back-to-back to potentiate power.",
+    rotate:20, seg:()=>THIRDS('Contrast Block'), phase:()=>'Contrast complex',
+    main:()=>({vol:'Heavy 3x3 @85% → jump ×5 → ballistic ×5 → assisted jump ×5', prog:true, tag:'Complex'}),
+    layout:{
+      principle:"Pair heavy and explosive back-to-back to potentiate power (PAP).",
+      loading:"Cluster: heavy 3x3 @85% → plyo → ballistic → assisted jump, full rest between clusters.",
+      rotation:"Same primary lift; the complex stays fixed so you can track output.",
+      bestFor:"Peaking power in trained athletes who already own a strength base.",
+      mistake:"Running it on beginners — no strength base means nothing to potentiate."}
+  },
+  concurrent:{
+    name:"Concurrent / Hybrid", tag:"CONC", blurb:"Hold everything at once — in-season",
+    intro:"Strength, power, and conditioning held together at moderate doses — built for in-season.",
+    rotate:20, seg:()=>THIRDS('Concurrent Block'), phase:()=>'Concurrent',
+    main:()=>({vol:'4x5 · 75% + power + energy', prog:true, tag:'Concurrent'}),
+    layout:{
+      principle:"Train strength, power, and conditioning together at moderate doses — hold every quality.",
+      loading:"Moderate strength (4x5 @75%) + a power expression + an energy-system finisher each session.",
+      rotation:"Same main lifts; nothing peaks, everything maintains.",
+      bestFor:"In-season, GPP, or general athletes who can't afford to lose any quality.",
+      mistake:"Pushing every quality hard at once — moderate is the point, or you recover from none."}
+  }
+};
+function sysNow(){ return SYS[C.system]||SYS.sts; }
+
+function blockTemplate(i){
+  if(i===0) return T1;
+  if(i===1) return T2;
+  const s=(i-2)*4;
+  return {light:true,label:"Accessory Volume",
+    pools:[LIGHT_POOLS[s%3],LIGHT_POOLS[(s+1)%3],LIGHT_POOLS[(s+2)%3],LIGHT_POOLS[(s+3)%3]]};
+}
+function eqFilter(pool){
+  return pool.filter(x=>!x.req||x.req.length===0||x.req.some(r=>C.equipment[r]>0));
+}
+const skillRep={none:0,low:1,med:2,high:3};
+function stageFor(week, ex, mode, o){
+  const base=ex.s[0];
+  const m=base.match(/^(\d+)x(\d+)(.*)$/);
+  if(mode==="main"){
+    const p=m?{S0:+m[1],reps:+m[2],rest:m[3]||""}:{S0:3,reps:3,rest:""};
+    return sysNow().main(week, p, o||{});
+  }
+  if(m){
+    const S0=+m[1], rest=m[3]||"";
+    const reps=+m[2]+(skillRep[C.skill]||0);
+    return {vol:`${S0}x${reps}${rest}`, prog:false};
+  }
+  return {vol:ex.s[0], prog:false};
+}
+const POOL_FALLBACK={throws:"power", mainStrength:"mainBW"};
+const BW_SAFETY={n:"Bodyweight Circuit",s:["2x10"]};
+function pickEx(poolName, offset){
+  let pool=eqFilter(POOL[poolName]);
+  if(!pool.length && POOL_FALLBACK[poolName]) pool=eqFilter(POOL[POOL_FALLBACK[poolName]]);
+  if(!pool.length) pool=[BW_SAFETY];
+  return pool[((offset%pool.length)+pool.length)%pool.length];
+}
+function subAvailable(name){
+  const n=name.toLowerCase();
+  if((n.includes("kb")||n.includes("kettlebell"))&&!C.equipment.kb) return false;
+  if((n.startsWith("mb")||n.includes("med ball")||n.includes(" mb "))&&!C.equipment.medBalls) return false;
+  if(n.includes("db ")&&!C.equipment.dumbbells) return false;
+  if(n.includes("band")&&!C.equipment.bands) return false;
+  if(n.includes("ghd")&&!C.equipment.ghd) return false;
+  if(n.includes("foam roller")&&!C.equipment.foamRoller) return false;
+  if(n.includes("hang")&&!C.equipment.pullUpBar) return false;
+  return true;
+}
+function core4For(dayIndex, meso, week){
+  return CORE4.map((c,i)=>{
+    const subs=c.sub.filter(subAvailable);
+    const list=subs.length?subs:c.sub;
+    return {anchor:c.anchor, ex:list[(dayIndex+meso+i+week)%list.length]};
+  });
+}
+function coordFor(dayIndex, meso, week){
+  const pool=eqFilter(POOL.coordination);
+  const list=pool.length?pool:[{n:"Reaction / Footwork Drill",s:["2x5"]}];
+  return list[(dayIndex+meso+week)%list.length];
+}
+/* sport shifts which conditioning option comes up first — everything else is constraint-driven */
+const SPORT_OFFSET={"Football":0,"Basketball":1,"Soccer":2,"Volleyball":3,"Wrestling":4,"Track & Field":5,
+  "Cross Country":6,"Lacrosse":7,"Tennis":1,"Swimming":2,"Golf":3,"General Athlete":0};
+function condItem(offset){
+  const o=offset+(SPORT_OFFSET[C.sport]||0);
+  const pool=CONDITIONING.filter(c=>c.req.length===0||c.req.some(r=>C.equipment[r]>0));
+  const list=pool.length?pool:CONDITIONING.filter(c=>c.req.length===0);
+  const safe=list.length?list:[{n:"Bodyweight Conditioning Circuit",req:[]}];
+  return safe[((o%safe.length)+safe.length)%safe.length];
+}
+function finisherIdeas(){
+  const out=[];
+  if(C.equipment.sleds>0||C.equipment.drags>0) out.push("Sled relay");
+  if(C.equipment.medBalls>0) out.push("Med-ball throw-down");
+  if(C.equipment.field>0||C.equipment.turf>0) out.push("Shuttle / tempo race");
+  out.push("Team competition"); out.push("Capacity finisher");
+  return out.slice(0,4);
+}
+const codeLetter=i=>String.fromCharCode(65+i);
+const typeLabel=t=>({lifting:"Lifting",conditioning:"Conditioning",both:"Both · lift first"}[t]||t);
+function liftCount(total){return Math.max(1, Math.floor((total-15)/15));}
+function condCount(total){return Math.max(1, Math.floor((total-15)/15));}
+function bothAlloc(total){
+  const avail=total-15;
+  let lift=Math.min(2, Math.floor(avail/15));
+  let cond=Math.floor((avail-lift*15)/15);
+  if(cond<1 && lift>0){ lift=lift-1; cond=Math.floor((avail-lift*15)/15); }
+  if(cond<1) cond=1;
+  return {lift, cond};
+}
+function lightBlock(i, dayIndex, meso, week){
+  const s=(i-2)*4, mod=(x)=>((x%3)+3)%3, rows=[];
+  const pools=[LIGHT_POOLS[mod(s)],LIGHT_POOLS[mod(s+1)],LIGHT_POOLS[mod(s+2)],LIGHT_POOLS[mod(s+3)]];
+  pools.forEach((p,k)=>{
+    const ex=pickEx(p, dayIndex+meso+i*4+k), st=stageFor(week, ex, "hold");
+    rows.push({purpose:LIGHT_LABEL[p]||"Accessory", ex:ex.n, vol:st.vol, prog:st.prog});
+  });
+  return {kind:"lift", time:15, label:"Block "+(i+1)+" · Accessory Volume", rows};
+}
+function liftingBlock(i, dayIndex, meso, week){
+  const sys=sysNow();
+  const roleSys=!!sys.roles;
+  const role=roleSys ? sys.roles[dayIndex % sys.roles.length] : null;
+
+  /* role systems: one main block, then accessory volume. classic systems: T1, T2, then light */
+  const isLight = roleSys ? (i>0) : blockTemplate(i).light;
+  if(isLight) return lightBlock(i, dayIndex, meso, week);
+
+  const t = roleSys ? T1 : blockTemplate(i);
+  let mainPool = t.main;
+  if(roleSys && sys.mainPoolFor) mainPool = sys.mainPoolFor(role, week) || t.main;
+
+  const rot = Math.floor((week-1)/(sys.rotate||20));   /* how often the main lift rotates */
+  const mainEx = pickEx(mainPool, dayIndex+rot+i);
+  const mst = stageFor(week, mainEx, "main", {dayIndex, role, meso});
+  const rows=[{purpose: mst.tag?("Main · "+mst.tag):"Main", ex:mainEx.n, vol:mst.vol, prog:mst.prog}];
+  t.acc.forEach((p,k)=>{
+    const ex=pickEx(p, dayIndex+meso+i*3+k+1), st=stageFor(week, ex, "hold");
+    rows.push({purpose:ACC_LABEL[p]||"Accessory", ex:ex.n, vol:st.vol, prog:st.prog});
+  });
+  const label = "Block "+(i+1)+" · "+(role||t.label);
+  return {kind:"lift", time:15, label, rows};
+}
+function condBlockObj(j, dayIndex){
+  const a=condItem(dayIndex+j), b=condItem(dayIndex+j+3);
+  return {kind:"cond", time:15, label:"Conditioning"+(j>0?" "+(j+1):""),
+    rows:[{purpose:"Energy",ex:a.n,vol:"work"},{purpose:"Energy",ex:b.n,vol:"work"}]};
+}
+function resolveSession(week, dayIndex, type){
+  const meso=Math.floor((week-1)/20);
+  const total=C.sessionLength;
+  const blocks=[];
+  blocks.push({kind:"warmup",time:5,label:"Warm-Up · Core-4",
+    rows:core4For(dayIndex,meso,week).map(c=>({purpose:c.anchor,ex:c.ex,vol:"1–2 rounds"}))});
+  const co=coordFor(dayIndex,meso,week);
+  blocks.push({kind:"coord",time:5,label:"Coordination",
+    rows:[{purpose:"Tennis Ball",ex:co.n,vol:co.s?co.s[0]:"2x5"}]});
+  let lift=0, cond=0;
+  if(type==="lifting") lift=liftCount(total);
+  else if(type==="conditioning") cond=condCount(total);
+  else { const a=bothAlloc(total); lift=a.lift; cond=a.cond; }
+  for(let i=0;i<lift;i++) blocks.push(liftingBlock(i,dayIndex,meso,week));
+  for(let j=0;j<cond;j++) blocks.push(condBlockObj(j,dayIndex));
+  const used=10+lift*15+cond*15;
+  const fin=Math.max(5,total-used);
+  blocks.push({kind:"finisher",time:fin,label:"Finisher / Competition",ideas:finisherIdeas()});
+  return {week, meso, type, total, code:codeLetter(dayIndex), blocks};
+}
+
+/* =========================== UI =========================== */
+let page=1, openWeek=null, openFams=null, methodOpen=false, openDate=null;
+const el=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const activeDays=()=>DAYS.filter(d=>C.days[d]);
+function ensureFams(){
+  if(openFams) return;
+  openFams={};
+  SYSFAM.forEach(([fam,ids])=>{ openFams[fam]=ids.includes(C.system); });
+}
+
+/* -------- saved programs (in-memory; persists via localStorage when the
+   file is opened directly in a browser, degrades to session-only otherwise) -------- */
+function loadPrograms(){ try{ const s=localStorage.getItem('sts_programs'); return s?JSON.parse(s):[]; }catch(e){ return []; } }
+function persistPrograms(){ try{ localStorage.setItem('sts_programs', JSON.stringify(PROGRAMS)); }catch(e){} }
+let PROGRAMS=loadPrograms();
+function snapCfg(){ return {system:C.system,sessionLength:C.sessionLength,cats:[...C.cats],days:{...C.days},skill:C.skill,sport:C.sport,start:C.start}; }
+function saveProgram(){
+  const name=(C.name||'').trim()||('Program '+(PROGRAMS.length+1));
+  C.name=name;
+  const i=PROGRAMS.findIndex(p=>p.name===name);
+  if(i>=0) PROGRAMS[i].cfg=snapCfg(); else PROGRAMS.push({name, cfg:snapCfg()});
+  persistPrograms();
+}
+function loadProgram(name){
+  const p=PROGRAMS.find(x=>x.name===name); if(!p) return;
+  C.name=p.name; C.system=p.cfg.system; C.sessionLength=p.cfg.sessionLength;
+  C.cats=[...p.cfg.cats]; C.days={...p.cfg.days}; C.skill=p.cfg.skill; C.sport=p.cfg.sport;
+  C.start=p.cfg.start||mondayISO();
+  syncEquipment(); openFams=null;
+}
+function newProgram(){
+  let n=1; const names=PROGRAMS.map(p=>p.name);
+  while(names.includes('Program '+n)) n++;
+  C.name='Program '+n; openFams=null;
+}
+
+function render(){
+  el('ttl').textContent = page===1?'Program Builder':'52-Week Program';
+  el('topBtn').style.display = page===2?'':'none';
+  el('view').className = 'wrap' + (page===2?' wide':'');
+  el('view').innerHTML = page===1?viewConstraints():viewProgram();
+  el('bar').innerHTML = page===1?barConstraints():'';
+  el('bar').style.display = page===1?'':'none';
+}
+
+/* ---------- page 1 ---------- */
+function viewConstraints(){
+  ensureFams();
+  const d=activeDays();
+  const liftDays=d.filter(x=>C.days[x]!=='conditioning').length;
+  const blocks=C.sessionLength<=30?1:liftCount(C.sessionLength);
+  return `
+  <div class="card">
+    <div class="hd"><span class="num">00</span><div><h2>Programming system</h2>
+      <span class="cap">Pick the method — it re-drives all 52 weeks</span></div></div>
+    ${SYSFAM.map(([fam,ids])=>{
+      const open=!!openFams[fam], sel=ids.includes(C.system);
+      return `
+      <button class="famhd" data-fam="${esc(fam)}" aria-expanded="${open}">
+        <span class="fl">${esc(fam)}</span>
+        <span class="fsel">${sel?esc(SYS[C.system].tag):''}</span>
+        <span class="fcx">${open?'\u2013':'+'}</span></button>
+      ${open?`<div class="opts" style="margin:6px 0 2px">${ids.map(id=>{const s=SYS[id];return `
+        <button class="opt" data-system="${id}" aria-pressed="${C.system===id}">
+          <span class="l">${esc(s.name)}</span><span class="s">${esc(s.blurb)}</span></button>`;}).join('')}
+      </div>`:''}`;}).join('')}
+    <div class="note"><b>${esc(sysNow().name)}.</b> ${sysNow().intro}</div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="num">01</span><div><h2>Time of session</h2></div></div>
+    <div class="opts">${LENGTHS.map(m=>`
+      <button class="opt" data-len="${m}" aria-pressed="${C.sessionLength===m}">
+        <span class="l">${m} min</span><span class="s">${m<=30?'1 block':liftCount(m)+' blocks'}</span></button>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="num">02</span><div><h2>Equipment</h2>
+      <span class="cap">Tap what you actually have</span></div></div>
+    <div class="opts" style="margin-bottom:12px">
+      ${PRESETS.map((p,i)=>`<button class="btn ghost sm" data-preset="${i}">${p.l}</button>`).join('')}
+    </div>
+    <div class="eqgrid">${EQCATS.map(c=>`
+      <button class="eq" data-cat="${c.id}" aria-pressed="${C.cats.includes(c.id)}">
+        <span class="l">${c.l}</span><span class="s">${c.s}</span></button>`).join('')}
+    </div>
+    ${!C.cats.length?`<div class="note warn">Nothing selected — the engine will fall back to bodyweight only. It never programs gear you don't have.</div>`:''}
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="num">03</span><div><h2>Days</h2></div></div>
+    <div class="daygrid">
+      ${DAYS.map(day=>{const st=C.days[day];
+        const ml={lifting:'Lift',both:'Both',conditioning:'Cond'}[st]||'Off';
+        return `<button class="daychip" data-daycycle="${day}" data-on="${st?1:0}">
+          <span class="dn">${day}</span><span class="dm">${ml}</span></button>`;}).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="num">04</span><div><h2>Skill level</h2></div></div>
+    <div class="opts">${SKILLS.map(([v,l,s])=>`
+      <button class="opt" data-skill="${v}" aria-pressed="${C.skill===v}">
+        <span class="l">${l}</span><span class="s">${s}</span></button>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="num">05</span><div><h2>Sport</h2></div></div>
+    <div class="opts">${SPORTS.map(s=>`
+      <button class="opt" data-sport="${esc(s)}" aria-pressed="${C.sport===s}">
+        <span class="l">${esc(s)}</span></button>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="num">06</span><div><h2>Program name</h2></div></div>
+    <input class="tin" id="pname" value="${esc(C.name)}" placeholder="e.g. Varsity FB Off-Season" autocomplete="off">
+    ${PROGRAMS.length?`
+      <div class="cap" style="display:block;margin:12px 0 6px">Saved programs — tap to load & edit</div>
+      <div class="opts">${PROGRAMS.map(p=>`
+        <button class="opt" data-loadprog="${esc(p.name)}" aria-pressed="${C.name===p.name}">
+          <span class="l">${esc(p.name)}</span>
+          <span class="s">${esc(p.cfg.sport)} · ${esc(SYS[p.cfg.system].tag)}</span></button>`).join('')}
+      </div>`:''}
+  </div>`;
+}
+
+function barConstraints(){
+  const d=activeDays();
+  return `<div class="inner">
+    <div class="sum">${esc(sysNow().tag)} · ${C.sessionLength} min · ${d.length||'no'} day${d.length===1?'':'s'} ·
+      ${C.cats.length} equipment group${C.cats.length===1?'':'s'} · ${esc(C.sport)}</div>
+    <button class="btn primary" id="enterBtn" ${d.length?'':'disabled'}>Save &amp; build</button>
+  </div>`;
+}
+
+/* ---------- annual calendar ---------- */
+let CALMAP={};
+function calendarHTML(){
+  CALMAP={};
+  if(!C.start) return `<div class="empty noprint">Pick a start date to build the calendar.</div>`;
+  const start=isoToDate(C.start);
+  const startMon=addDays(start, -((start.getDay()+6)%7));   /* Monday of the start week */
+  const days=activeDays();
+  days.forEach((dayName,ord)=>{
+    const wd=DAYS.indexOf(dayName), code=codeLetter(ord), type=C.days[dayName];
+    for(let w=1;w<=52;w++){ CALMAP[fmtISO(addDays(startMon,(w-1)*7+wd))]={code,type,week:w,di:ord}; }
+  });
+  const firstMonth=new Date(startMon.getFullYear(),startMon.getMonth(),1);
+  const lastDate=addDays(startMon,51*7+6);
+  const lastMonth=new Date(lastDate.getFullYear(),lastDate.getMonth(),1);
+  let head=`<th class="corner">${firstMonth.getFullYear()}</th>`;
+  for(let c=0;c<37;c++) head+=`<th>${CAL_WDL[c%7]}</th>`;
+  let rows='', cur=new Date(firstMonth), first=true;
+  while(cur<=lastMonth){
+    const y=cur.getFullYear(), mo=cur.getMonth();
+    const offset=(new Date(y,mo,1).getDay()+6)%7, dim=new Date(y,mo+1,0).getDate();
+    const showYr=(mo===0)&&!first; first=false;
+    let cells='';
+    for(let c=0;c<37;c++){
+      const day=c-offset+1;
+      if(day<1||day>dim){ cells+='<td></td>'; continue; }
+      const key=fmtISO(new Date(y,mo,day)), hit=CALMAP[key];
+      cells+= hit
+        ? `<td class="train c${hit.type}" data-date="${key}"><span class="ds">${day}</span><span class="cd">${hit.code}</span></td>`
+        : `<td><span class="dn">${day}</span></td>`;
+    }
+    rows+=`<tr><td class="rowh">${MON3[mo]}${showYr?` <span class="yr">'${String(y).slice(2)}</span>`:''}</td>${cells}</tr>`;
+    cur=new Date(y,mo+1,1);
+  }
+  return `<div class="calwrap"><table class="cal">
+    <colgroup><col class="lab"><col span="37"></colgroup>
+    <thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+const DOW3=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function modalHTML(key){
+  const info=CALMAP[key]; if(!info) return '';
+  const dt=isoToDate(key), dayName=DAYS[(dt.getDay()+6)%7];
+  const s=resolveSession(info.week, info.di, info.type);
+  const dstr=`${DOW3[dt.getDay()]}, ${MON3[dt.getMonth()]} ${dt.getDate()} '${String(dt.getFullYear()).slice(2)}`;
+  return `<div class="modal noprint" id="modalBg">
+    <div class="modalcard">
+      <div class="modalhd">
+        <div><div class="mt">${dstr}</div>
+          <div class="ms">Week ${info.week} · Session ${info.code} · ${typeLabel(info.type)}</div></div>
+        <button class="btn ghost sm" id="modalClose">Close</button>
+      </div>
+      ${sessionHTML(s, dayName)}
+    </div></div>`;
+}
+
+/* ---------- page 2 ---------- */
+function viewProgram(){
+  const d=activeDays();
+  const sys=sysNow();
+  const pills=[`<span class="pill">System <b>${esc(sys.name)}</b></span>`,
+    `<span class="pill"><b>${C.sessionLength}</b> min</span>`,
+    `<span class="pill"><b>${d.length}</b> days/wk</span>`,
+    `<span class="pill">Skill <b>${SKILLS.find(s=>s[0]===C.skill)[1]}</b></span>`,
+    `<span class="pill"><b>${esc(C.sport)}</b></span>`,
+    `<span class="pill"><b>52</b> weeks</span>`].join('');
+
+  const L=sys.layout;
+  const layoutRows=[['Principle',L.principle],['How load moves',L.loading],['Exercise rotation',L.rotation],['Best for',L.bestFor],['Common mistake',L.mistake]];
+  let out=`
+    <button class="famhd noprint" id="methodBar" aria-expanded="${methodOpen}" style="margin-top:0">
+      <span class="fl">${esc(sys.name)}</span>
+      <span class="fsel">${esc(sys.tag)}</span>
+      <span class="fcx">${methodOpen?'\u2013':'+'}</span></button>
+    ${methodOpen?`<div class="card" style="margin:6px 0 14px">
+      <div class="note" style="margin:0 0 10px">${sys.intro}</div>
+      <table class="blk" style="width:100%;border:0"><tbody>
+      ${layoutRows.map(r=>`<tr><td class="p" style="width:120px">${r[0]}</td>
+        <td style="border-bottom:1px solid var(--line)">${esc(r[1])}</td></tr>`).join('')}
+      </tbody></table></div>`:''}
+
+    <div class="progswitch noprint">
+      <span class="cap">Program</span>
+      <select class="progsel" id="progSel">${PROGRAMS.map(p=>`<option ${p.name===C.name?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+      <button class="btn ghost sm" id="newProgBtn">＋ New</button>
+    </div>
+    <div class="progswitch noprint" style="margin:-6px 0 14px">
+      <span class="cap">Start</span>
+      <input type="date" class="progsel" id="startDate" value="${esc(C.start)}" style="text-transform:none;letter-spacing:0">
+    </div>
+
+    <div class="callegend noprint">
+      <span><i class="sw clifting"></i>Lifting</span>
+      <span><i class="sw cconditioning"></i>Conditioning</span>
+      <span><i class="sw cboth"></i>Both</span>
+    </div>
+    ${calendarHTML()}
+
+    <button class="btn ghost sm noprint" id="printBtn" style="margin-bottom:8px">Print program</button>`;
+
+  out += openDate ? modalHTML(openDate) : '';
+  return out;
+}
+
+function sessionHTML(s, day){
+  return `<div class="sess">
+    <div class="sesshd"><span class="code">${s.code}</span>
+      <span class="t">${day} · ${typeLabel(s.type)}</span>
+      <span class="m">${s.total} min</span></div>
+    ${s.blocks.map(b=>`
+      <div class="blk">
+        <div class="bh"><span class="bl">${esc(b.label)}</span><span class="bt">${b.time} min</span></div>
+        ${b.ideas
+          ? `<div class="ideas">${b.ideas.map(esc).join(' · ')}</div>`
+          : `<table>${b.rows.map(r=>`<tr>
+              <td class="p">${esc(r.purpose)}</td>
+              <td>${esc(r.ex)}</td>
+              <td class="v ${r.prog?'up':''}">${esc(r.vol)}</td></tr>`).join('')}</table>`}
+      </div>`).join('')}
+  </div>`;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e=>{
+  if(e.target && e.target.id==='modalBg'){ openDate=null; return render(); }
+  const dc=e.target.closest('[data-date]'); if(dc){ openDate=dc.dataset.date; return render(); }
+  const b=e.target.closest('button'); if(!b) return;
+
+  if(b.id==='modalClose'){ openDate=null; return render(); }
+  if(b.dataset.fam){ ensureFams(); openFams[b.dataset.fam]=!openFams[b.dataset.fam]; return render(); }
+  if(b.dataset.system){ C.system=b.dataset.system; window.scrollTo(0,0); return render(); }
+  if(b.dataset.len){ C.sessionLength=+b.dataset.len; return render(); }
+  if(b.dataset.preset!==undefined){
+    C.cats=[...PRESETS[+b.dataset.preset].cats]; syncEquipment(); return render();
+  }
+  if(b.dataset.cat){
+    const i=C.cats.indexOf(b.dataset.cat);
+    i>-1?C.cats.splice(i,1):C.cats.push(b.dataset.cat);
+    syncEquipment(); return render();
+  }
+  if(b.dataset.daycycle){
+    const day=b.dataset.daycycle, order=[undefined,'lifting','both','conditioning'];
+    const next=order[(order.indexOf(C.days[day]||undefined)+1)%order.length];
+    if(next) C.days[day]=next; else delete C.days[day];
+    return render();
+  }
+  if(b.dataset.skill){ C.skill=b.dataset.skill; return render(); }
+  if(b.dataset.sport){ C.sport=b.dataset.sport; return render(); }
+
+  if(b.dataset.loadprog){ loadProgram(b.dataset.loadprog); return render(); }
+  if(b.id==='methodBar'){ methodOpen=!methodOpen; return render(); }
+  if(b.id==='newProgBtn'){ newProgram(); page=1; window.scrollTo(0,0); return render(); }
+  if(b.id==='enterBtn'){ saveProgram(); page=2; openWeek=1; window.scrollTo(0,0); return render(); }
+  if(b.id==='topBtn'){ page=1; window.scrollTo(0,0); return render(); }
+  if(b.dataset.week){ const w=+b.dataset.week; openWeek = openWeek===w?null:w; return render(); }
+  if(b.id==='printBtn') return window.print();
+});
+
+render();
+
+/* program name typing (no re-render, to keep input focus) */
+document.addEventListener('input', e=>{
+  if(e.target && e.target.id==='pname'){ C.name=e.target.value; }
+});
+/* switch programs from the 52-week view */
+document.addEventListener('change', e=>{
+  if(e.target && e.target.id==='progSel'){ loadProgram(e.target.value); openWeek=1; window.scrollTo(0,0); return render(); }
+  if(e.target && e.target.id==='startDate'){ C.start=e.target.value||mondayISO(); return render(); }
+});
+</script>
+</body>
+</html>
