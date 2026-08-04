@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { InvitePanel } from './InvitePanel'
 import { TrackerModule } from '../modules/tracker/TrackerModule'
 import { BuildProgramModule } from '../modules/build-program/BuildProgramModule'
+import { FloorLogModule } from '../modules/floor-log/FloorLogModule'
 
 const MODES = ['build', 'assess', 'att', 'floor', 'track', 'reports']
 const MODE_LABELS = {
@@ -51,6 +52,8 @@ export function AppShell() {
           <TrackerModule />
         ) : activeMode === 'build' ? (
           <BuildProgramModule />
+        ) : activeMode === 'floor' ? (
+          <FloorLogModule />
         ) : (
           <p>{MODE_LABELS[activeMode]} — not built yet (Phase 4).</p>
         )}

@@ -10,20 +10,16 @@ Rebuild of a single-file HTML facility-management app into React + Vite + Supaba
 - Phase 3 — auth (Supabase-only, invite-based facility joining, role-gated shell)
 - Phase 4 Step 22 — Tracker (roster, test database, leaderboards)
 - Phase 4 Step 23 — Build Program (engine, 17-system library, constraints flow)
+- Phase 4 Step 24 — Floor Log (`src/modules/floor-log/`) — full reference parity per Garrett's mid-build reversal of the original "stripped down" instruction: real ASC workload math + exercise dropdown w/ coefficients, PSC is manual-entry only (no auto-fill — Assessment doesn't exist yet). Required `0005_floor_log.sql` (new `floor_sessions` + reshaped one-row-per-set `floor_logs`). Verified end-to-end live.
 
-**Next: Phase 4 Step 24 — Floor Log**
+**Next: Phase 4 Step 25 — Attendance**
 
-Depends on two modules already built:
-- Pulls the day's session from the 52-week calendar Build Program generates — `resolveSession()` in `src/modules/build-program/engine/session.js`, given a program's `constraints` + `system`.
-- Logs against athletes from Tracker (`athletes` table).
+Port the `STSAtt` data layer logic (statuses, point values, teams as display groupings) from the reference, writing to the `attendance` table instead of the `sts-attendance-v3` blob.
 
-Stays stripped per Garrett's decision: **exercise, sets, reps, weight only. No ASC or PSC displayed** — the EXDB workload math (`engine/workload.js`) is not part of this step's scope.
-
-## Gotchas before touching Floor Log
+## Gotchas before touching Attendance
 
 - **No local psql/Supabase CLI in this environment.** New migrations get applied by Garrett pasting into the Supabase SQL Editor by hand — can't be run directly from Claude Code.
-- **`floor_logs` already exists** (Phase 2: `athlete_id, date, exercise, sets, reps, weight`, facility-scoped, RLS in place) — check it against what the module actually needs before assuming it's complete; both Tracker and Build Program hit schema gaps the plan hadn't anticipated.
-- **Any future athlete-name matching must be exact, not fuzzy** — Garrett's explicit cut during the Tracker phase, applies directly to Attendance (Step 25, right after Floor Log).
-- **Lazy first-load seeding must be race-safe.** React StrictMode double-invokes effects in dev — use `upsert(...).ignoreDuplicates(true)`, never read-then-conditionally-insert.
+- **Any athlete-name matching must be exact, not fuzzy** — Garrett's explicit cut during the Tracker phase; this is the module it was called out for.
+- **Lazy first-load seeding must be race-safe.** React StrictMode double-invokes effects in dev — use `upsert(...).ignoreDuplicates(true)`, never read-then-conditionally-insert (Tracker's `ensureDefaultMetrics` and Floor Log's `ensureSession`/`seedExercises` both do this).
 - **"Confirm email" is currently OFF** on the dev Supabase project for faster iteration — re-enable before real users touch it.
-- Test data exists in the dev DB from Tracker/Build Program verification (a few athletes, one saved program) — harmless, not cleaned up.
+- Test data exists in the dev DB from Tracker/Build Program/Floor Log verification (a few athletes, one saved program, one logged Floor Log set) — harmless, not cleaned up.
