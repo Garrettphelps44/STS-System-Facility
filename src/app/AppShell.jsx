@@ -24,7 +24,7 @@ const MODE_LABELS = {
 // Phase 2, already proven in isolation_test.sql. This just makes sure an
 // athlete can't even navigate to a mode whose data they can't read.
 export function AppShell() {
-  const { membership, signOut } = useAuth()
+  const { membership, memberships, switchFacility, signOut } = useAuth()
   const isAthlete = membership.role === 'athlete'
   const visibleModes = isAthlete ? ['reports'] : MODES
   const [mode, setMode] = useState(isAthlete ? 'reports' : 'build')
@@ -38,6 +38,21 @@ export function AppShell() {
           <div className="name">STRENGTH THROUGH <span>SYSTEMS</span></div>
         </div>
         <div className="brandbar-right">
+          {memberships.length > 1 && (
+            <label className="facility-switcher">
+              <span className="sr-only">Facility</span>
+              <select
+                value={membership.facilityId}
+                onChange={(e) => switchFacility(e.target.value)}
+              >
+                {memberships.map((m) => (
+                  <option key={m.facilityId} value={m.facilityId}>
+                    {m.facilityName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <span className="brandbar-user">Signed in as {membership.role}</span>
           <button className="btn logout ghost" type="button" onClick={signOut}>Sign out</button>
         </div>

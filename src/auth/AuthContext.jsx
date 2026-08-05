@@ -7,28 +7,40 @@ import { supabase } from '../lib/supabase'
 // clicks the link in their inbox and comes back to sign in. See runPendingSignup.
 const PENDING_KEY = 'sts_pending_signup'
 
+// Which of a user's several facility_members rows is "active" — per-user
+// because the same browser could see different logins over time.
+const currentFacilityKey = (userId) => `sts_current_facility:${userId}`
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
-  const [membership, setMembership] = useState(null)
+  const [memberships, setMemberships] = useState([])
+  const [currentFacilityId, setCurrentFacilityId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [bootstrapError, setBootstrapError] = useState(null)
 
-  const loadMembership = useCallback(async (userId) => {
+  const membership = currentFacilityId
+    ? memberships.find((m) => m.facilityId === currentFacilityId) ?? null
+    : null
+
+  // Every row this login belongs to, not just one — a user can be owner of
+  // their own facility and coach/owner at any number of client facilities.
+  const loadMemberships = useCallback(async (userId) => {
     const { data, error } = await supabase
       .from('facility_members')
-      .select('facility_id, role, athlete_id')
+      .select('facility_id, role, athlete_id, facilities(name)')
       .eq('user_id', userId)
-      .limit(1)
-      .maybeSingle()
     if (error) {
-      console.error('loadMembership failed', error)
-      return null
+      console.error('loadMemberships failed', error)
+      return []
     }
-    return data
-      ? { facilityId: data.facility_id, role: data.role, athleteId: data.athlete_id }
-      : null
+    return (data ?? []).map((row) => ({
+      facilityId: row.facility_id,
+      role: row.role,
+      athleteId: row.athlete_id,
+      facilityName: row.facilities?.name ?? 'Facility',
+    }))
   }, [])
 
   // Runs the signup intent stashed by SignUp.jsx, once a session actually
@@ -56,19 +68,29 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // Picks which facility should be active: whatever this login last had
+  // selected, if that membership still exists, otherwise just the first one.
+  const pickCurrentFacility = useCallback((userId, rows) => {
+    if (rows.length === 0) return null
+    const stored = localStorage.getItem(currentFacilityKey(userId))
+    return rows.some((r) => r.facilityId === stored) ? stored : rows[0].facilityId
+  }, [])
+
   const resolveSession = useCallback(async (nextSession) => {
     setSession(nextSession)
     if (!nextSession) {
-      setMembership(null)
+      setMemberships([])
+      setCurrentFacilityId(null)
       return
     }
-    let m = await loadMembership(nextSession.user.id)
-    if (!m && localStorage.getItem(PENDING_KEY)) {
+    let rows = await loadMemberships(nextSession.user.id)
+    if (rows.length === 0 && localStorage.getItem(PENDING_KEY)) {
       await runPendingSignup()
-      m = await loadMembership(nextSession.user.id)
+      rows = await loadMemberships(nextSession.user.id)
     }
-    setMembership(m)
-  }, [loadMembership, runPendingSignup])
+    setMemberships(rows)
+    setCurrentFacilityId(pickCurrentFacility(nextSession.user.id, rows))
+  }, [loadMemberships, runPendingSignup, pickCurrentFacility])
 
   useEffect(() => {
     let active = true
@@ -91,17 +113,40 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
-    setMembership(null)
+    setMemberships([])
+    setCurrentFacilityId(null)
   }, [])
 
-  const refreshMembership = useCallback(async () => {
+  // Re-reads this login's membership rows without touching which facility
+  // is currently active (unless that one no longer exists — e.g. removed).
+  const refreshMemberships = useCallback(async () => {
     if (!session) return
-    setMembership(await loadMembership(session.user.id))
-  }, [session, loadMembership])
+    const rows = await loadMemberships(session.user.id)
+    setMemberships(rows)
+    setCurrentFacilityId((prev) =>
+      rows.some((r) => r.facilityId === prev) ? prev : (rows[0]?.facilityId ?? null)
+    )
+  }, [session, loadMemberships])
+
+  const switchFacility = useCallback((facilityId) => {
+    if (!session) return
+    if (!memberships.some((m) => m.facilityId === facilityId)) return
+    localStorage.setItem(currentFacilityKey(session.user.id), facilityId)
+    setCurrentFacilityId(facilityId)
+  }, [session, memberships])
 
   return (
     <AuthContext.Provider
-      value={{ session, membership, loading, bootstrapError, signOut, refreshMembership }}
+      value={{
+        session,
+        membership,
+        memberships,
+        switchFacility,
+        loading,
+        bootstrapError,
+        signOut,
+        refreshMembership: refreshMemberships,
+      }}
     >
       {children}
     </AuthContext.Provider>

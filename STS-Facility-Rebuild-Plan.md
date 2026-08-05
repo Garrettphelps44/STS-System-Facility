@@ -226,15 +226,45 @@ Live on Netlify, deployed ahead of schedule — Phase 5 (multi-facility hardenin
 
 ---
 
-## PHASE 5 — Multi-facility hardening (3–5 hrs)
+## PHASE 5 — Multi-facility hardening (3–5 hrs) ✅ DONE
 
-**Step 29.** Create a second real facility in the app (not just in the database) and populate it with dummy data.
+**Step 29.** Create a second real facility in the app (not just in the database) and populate it with dummy data. ✅ DONE.
 
-**Step 30.** Go through all six modules logged in as facility B. Any place where facility A's data appears is a bug — including in dropdowns, leaderboards, and report share links.
+**Step 30.** Go through all six modules logged in as facility B. Any place where facility A's data appears is a bug — including in dropdowns, leaderboards, and report share links. ✅ DONE.
 
-**Step 31.** Have Claude Code add a facility switcher for users who belong to more than one (you'll need this — IRCS plus every client facility).
+**Step 31.** Have Claude Code add a facility switcher for users who belong to more than one (you'll need this — IRCS plus every client facility). ✅ DONE.
 
-**Step 32.** Commit and deploy to Netlify. You now have a working multi-facility product with no payments. **This is a sellable state** — you can onboard a paying facility manually while Stripe gets built.
+**Step 32.** Commit and deploy to Netlify. You now have a working multi-facility product with no payments. **This is a sellable state** — you can onboard a paying facility manually while Stripe gets built. ✅ DONE (committed; deploy triggers automatically on push to `main`, see Deployment section above).
+
+### Audit results (Steps 29–30) — reference this before assuming a future leak is new
+
+Setup: facility B (`garrettphelps8+facilityb@gmail.com`, facility "Facility B Isolation Test") was created live through the signup flow and populated with real data in every table. Compared against the `stsowner2` test facility (13 real athletes across every module) as facility A, checked both directions.
+
+| Module / surface | Result | Fix required |
+|---|---|---|
+| Tracker — Roster | PASS | none |
+| Tracker — Test Database | PASS | none |
+| Tracker — Leaderboards | PASS | none |
+| Floor Log — player picker | PASS (tried searching a real facility-A athlete name, zero matches) | none |
+| Attendance — teams / roll call / team report | PASS | none |
+| Build Program — saved-programs list | PASS (checked both directions: B doesn't see A's programs, A doesn't see B's) | none |
+| Assessment — player picker | PASS | none |
+| Reports — athlete picker | PASS | none |
+| Report share link — anonymous access | PASS — opens exactly the one shared athlete, nothing else reachable | none |
+| Report share link — cross-facility | Not a leak, but the first pass through this check produced a wrong result — see below | none (working as designed) |
+
+**Every table-level, RLS-gated surface passed clean on the first pass. No RLS policy changes were made in Phase 5** — Phase 2's policies held under real multi-facility use, not just the synthetic `isolation_test.sql`. If a leak turns up later in one of the modules above, it's a regression (something changed since this audit), not a gap that was always there.
+
+**Correction, worth knowing about:** the report-share-link cross-facility check was first "verified" by using the browser tool's `navigate` to load a facility-A `#report=<token>` URL while authenticated as facility B, and seeing the normal facility-B dashboard rather than the report — logged at the time as proof the link was blocked. That was a false negative caused by SPA navigation: changing only the URL hash on an already-mounted page doesn't reload the document, so `App.jsx`'s top-level `sharedToken` check (which runs before `AuthProvider` even mounts) never re-fires. A real hard reload on that same URL/session immediately showed facility A's shared report. **This is not an isolation bug** — `get_shared_report(token)` is intentionally a `SECURITY DEFINER` RPC gated only by possessing the unguessable token, exactly like a Google Docs share link, and that's what makes it usable by parents/coaches with no login at all (see Phase 4 Step 27). Anyone testing `#report=` behavior in this app in the future needs a real hard reload, not just a URL/hash change on a live session — that's the only way to trigger the real check.
+
+### Facility switcher — where it lives, how it works
+
+- `src/auth/AuthContext.jsx` loads *every* `facility_members` row for the logged-in user (`loadMemberships`, joined to `facilities(name)`), not just one. Which facility is currently active lives in `currentFacilityId` state, persisted per-user in `localStorage` under `sts_current_facility:<userId>`, defaulting to the first membership if nothing (or a stale value) is stored. `switchFacility(facilityId)` updates both.
+- `src/app/AppShell.jsx`'s brandbar renders a `<select>` of `memberships` only when there's more than one — a single-facility login sees no switcher at all.
+- No schema/migration change was needed: `facility_members`' primary key was already `(facility_id, user_id)`, so a user could already belong to more than one facility — only the client ever fetched just one row (`.limit(1).maybeSingle()`, no `.order(...)`).
+- **This fixed a real, previously-unnoticed bug**, found while building the switcher: with the old single-row fetch, a user belonging to two facilities landed on an arbitrary one — Postgres gives no ordering guarantee without an `ORDER BY` — possibly a different one on every login, with the other facility's data silently invisible the whole time. There was no error and nothing in the UI would have hinted this was happening.
+- Every module already reads `facilityId` off `useAuth().membership` as an effect dependency, so switching facilities needed zero changes outside these two files — data refetches automatically everywhere.
+- Verified: a single-facility athlete account shows no switcher; a login given a second facility (via the existing `create_facility` RPC — already `SECURITY DEFINER`, granted to `authenticated`, no new UI needed to test it) immediately shows a dropdown, switching instantly re-scopes every module with no stale rows from the previous facility, and the selection survives a reload. Test facility "Facility B North" (`aad4d67c-1d5d-40b0-a0e8-e046bae65f1a`) exists under the facility-B login for this — empty, not cleaned up.
 
 ---
 

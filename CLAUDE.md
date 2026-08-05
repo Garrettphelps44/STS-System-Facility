@@ -4,14 +4,16 @@ Rebuild of a single-file HTML facility-management app into React + Vite + Supaba
 
 ## Current Status
 
-**Done:** Phase 2 (database + RLS), Phase 3 (auth), Phase 4 — all six modules (Tracker, Build Program, Floor Log, Attendance, Assessment, Reports), Phase 4.5 (STS branding pass). **Deployed on Netlify.** Per-phase decisions and what changed vs. the reference: see `STS-Facility-Rebuild-Plan.md`.
+**Done:** Phase 2 (database + RLS), Phase 3 (auth), Phase 4 — all six modules (Tracker, Build Program, Floor Log, Attendance, Assessment, Reports), Phase 4.5 (STS branding pass), Phase 5 (multi-facility hardening — audit + facility switcher, see `STS-Facility-Rebuild-Plan.md` for the module-by-module results). **Deployed on Netlify.**
 
-**Next: Phase 5 — multi-facility hardening.**
+**This is a sellable state** — a facility can be onboarded manually right now, ahead of Stripe.
 
-- Create a second real facility through the app itself (not just in the DB), populate it with dummy data.
-- Walk every module logged in as facility B. Any place facility A's data appears is a bug — including dropdowns, leaderboards, and report share links.
-- Add a facility switcher for users who belong to more than one facility.
-- A real second test facility already exists for this: `garrettphelps8+facilityb@gmail.com` / `TestPassword123` (currently empty — good for a clean-slate walkthrough).
+**Next: Phase 6 — Stripe.**
+- Secret key lives in a Supabase Edge Function and nowhere else — never in React.
+- Webhook updates `facilities.subscription_status`.
+- Access gets gated on that column via RLS at the database level, not by hiding buttons in the UI.
+
+**Isolation rule for all future schema work:** every new table carries `facility_id`, no exceptions — and the Phase 2 isolation test (`supabase/tests/isolation_test.sql`) gets re-run whenever the schema changes.
 
 ## Theme
 
@@ -26,7 +28,8 @@ Live on Netlify, connected to `main` on GitHub — every push triggers a build a
 - **No local psql/Supabase CLI in this environment.** New migrations get applied by Garrett pasting into the Supabase SQL Editor by hand.
 - **Athlete-identity matching must be exact, never fuzzy** — Garrett's standing call from the Tracker phase, applies anywhere a typed name gets resolved to an athlete.
 - **Lazy first-load seeding must be race-safe** — `upsert(...).ignoreDuplicates(true)`, never read-then-insert. React StrictMode double-invokes effects in dev.
+- **Testing `#report=<token>` links requires a real hard reload**, not a URL/hash-only navigation on an already-loaded session — the anonymous-report check in `App.jsx` runs once at mount, before `AuthProvider`, and won't re-fire on a hash-only change. Got this wrong once during the Phase 5 audit; see `STS-Facility-Rebuild-Plan.md`.
 - **"Confirm email" is OFF** on the dev Supabase project for faster iteration — re-enable before real users touch it.
-- **The primary dev session (`garrettphelps8@gmail.com`) is signed out** and Claude doesn't have the real password — Garrett needs to sign back in himself before browser verification against his own facility can resume. All verification since the Attendance phase has run against the `stsowner2` test account/facility instead.
+- **The primary dev session (`garrettphelps8@gmail.com`) is signed out** and Claude doesn't have the real password — Garrett needs to sign back in himself before browser verification against his own facility can resume.
 - `garrettphelps8+stsathlete1@gmail.com` (`TestPassword123`) is an athlete-role login *in the `stsowner2` facility*, not a separate facility.
-- Test data exists across every module in the `stsowner2` facility from build verification — harmless, not cleaned up.
+- Test data not cleaned up (harmless): every module in the `stsowner2` facility from build verification; every module in the `garrettphelps8+facilityb@gmail.com` facility ("Facility B Isolation Test") from the Phase 5 audit; an empty second facility, "Facility B North," under that same login, used to test the facility switcher.
