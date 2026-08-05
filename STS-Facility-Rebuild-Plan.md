@@ -195,6 +195,37 @@ The rule for all six: build it, use it for real, commit it, then start the next 
 
 ---
 
+## PHASE 4.5 — STS branding pass ✅ DONE
+
+Not in the original phase list — inserted between Phase 4 and Phase 5 once all six modules were functionally complete. Styling and markup only, no schema/logic/behavior changes, scoped and approved before any file was touched.
+
+**What changed / what we learned:**
+- **Scope, Garrett's call:** shared shell only, not a full per-module port. The reference file has roughly 150 more classes than the four components actually named for this pass (brandbar, hex step indicator, panel, eyebrow) — things like `.modenav`, `.tkrow`, `.fl-*`, `.rep-*`, `.acard`, `.login-*` — but those were deliberately left unmined. Every module reuses the same shared primitives (`.panel`, `.btn`, `.eyebrow`, form fields) instead of bespoke per-module CSS. All of it lives in `src/theme/tokens.css`.
+- Reference file path correction: it's actually at `reference/reference:Index.html`, not `_reference/Index.html` as the original Phase 0/1 plan text has it — that path reference in this doc is stale.
+- `public/logo-s.png` already existed in the project from an earlier session — reused as-is for the brandbar logo, nothing was missing.
+- **`TrainingLoadChart.jsx` retuned to dark-only, Garrett's call.** It was the only place in the app with any light/dark theme logic (`prefers-color-scheme` + `data-theme` selectors, a CVD-validated palette) — nothing else has a theme toggle, so its light branch was permanently dead code once the fixed dark brand palette applied everywhere. Stripped the light branch; grid/axis/text colors now pull from the real `--line`/`--muted`/`--muted-2` tokens instead of a generic dark palette tuned to nothing in particular. The planned/actual bar colors (blue/orange) stayed hardcoded on purpose — they're validated dataviz colors, not brand colors.
+- **No token exists for "negative/down"** in the given palette. `ReportCard.jsx`'s trend indicator (up/down/flat) uses `--green` for up, `--gold` for down, `--muted` for flat — Garrett's call, no new color invented.
+- Added a `.modal-overlay` / `.modal-panel` pattern that wasn't in the original 4-component list — every modal in the app (session detail, reference panels, roll call, add player, etc.) had zero positioning CSS before this pass and rendered inline in the page flow instead of as an overlay. Added as shared shell infrastructure since it's basic UI chrome, not a per-module bespoke component.
+- **Follow-up fix, same pass:** the first version used `--line` (#1f241f) for panel and input borders, which is barely visible against `--panel`/`--bg` — Garrett flagged that everything was "getting lost in the blackness." Fixed with a new `--border-visible` token (#333d33) for containers and buttons, and switched input/select borders to green (`#2c8f30`, brightening to `#3fce43` on hover) — pulled directly from the reference file's own input styling, not invented. `--radius` bumped from 4px to 8px app-wide for visibly rounder corners. Also caught a real CSS bug from the first version: the input selector only matched explicit `type="text"` etc. and silently missed any input with no `type` attribute at all (e.g. Program Name) — broadened to a catch-all `input:not([type='checkbox']):not([type='radio'])`.
+- Reports got the extra polish pass per Step 27's own instruction — full brandbar, stat tiles, verified end-to-end on a live mobile viewport.
+
+Files: `src/theme/tokens.css` (new), plus className/markup changes across every module, auth, and shell file — no logic files touched.
+
+---
+
+## DEPLOYMENT
+
+Live on Netlify, deployed ahead of schedule — Phase 5 (multi-facility hardening) below isn't done yet.
+
+- **Build settings:** build command `npm run build`, publish directory `dist`. No `netlify.toml` in the repo — Netlify auto-detected both from the Vite project.
+- **Deploy trigger:** connected to the `main` branch on GitHub (`Garrettphelps44/STS-System-Facility`) — every `git push origin main` triggers an automatic build and deploy. For a manual rebuild (e.g. after changing environment variables, which only take effect on a fresh build): Netlify dashboard → Deploys → Trigger deploy → Deploy site.
+- **Environment variables required in Netlify** (Site settings → Environment variables — separate from `.env.local`, which is gitignored and never reaches Netlify):
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+- **Supabase project:** must point at the same dev project used throughout this build, `utmeduqiaexhvswcjdhq.supabase.co` — not the old live app's project. The first deploy hit a black screen because these env vars were never set in Netlify at all (missing values crash `createClient()` before React mounts). **Not yet independently verified this session:** confirm the values actually saved in the Netlify dashboard match `.env.local` exactly — they're set in two different places and it's easy for them to drift.
+
+---
+
 ## PHASE 5 — Multi-facility hardening (3–5 hrs)
 
 **Step 29.** Create a second real facility in the app (not just in the database) and populate it with dummy data.
