@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import * as brandingApi from '../modules/branding/brandingApi'
+import { applyBrandingVars } from '../theme/applyBranding'
 
 // Stashes the intent behind a signup ('create a facility' vs 'join one via
 // invite token') across the gap between auth.signUp() and the moment a real
@@ -17,6 +19,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [memberships, setMemberships] = useState([])
   const [currentFacilityId, setCurrentFacilityId] = useState(null)
+  const [branding, setBranding] = useState(null)
   const [loading, setLoading] = useState(true)
   const [bootstrapError, setBootstrapError] = useState(null)
 
@@ -111,6 +114,37 @@ export function AuthProvider({ children }) {
     }
   }, [resolveSession])
 
+  const loadBranding = useCallback(async (facilityId) => {
+    if (!facilityId) return null
+    try {
+      return await brandingApi.fetchBranding(facilityId)
+    } catch (err) {
+      console.error('loadBranding failed', err)
+      return null
+    }
+  }, [])
+
+  // Keyed on currentFacilityId, not on login — this is what makes the
+  // Phase 5 facility switcher and Phase 5.5 branding interact correctly:
+  // switching facilities re-fires this and repaints --green/--green-dim
+  // for whichever facility is now active. currentFacilityId going to
+  // null on sign-out resets to the STS default the same way.
+  useEffect(() => {
+    let active = true
+    loadBranding(currentFacilityId).then((b) => {
+      if (!active) return
+      setBranding(b)
+      applyBrandingVars(b)
+    })
+    return () => { active = false }
+  }, [currentFacilityId, loadBranding])
+
+  const refreshBranding = useCallback(async () => {
+    const b = await loadBranding(currentFacilityId)
+    setBranding(b)
+    applyBrandingVars(b)
+  }, [currentFacilityId, loadBranding])
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     setMemberships([])
@@ -142,6 +176,8 @@ export function AuthProvider({ children }) {
         membership,
         memberships,
         switchFacility,
+        branding,
+        refreshBranding,
         loading,
         bootstrapError,
         signOut,

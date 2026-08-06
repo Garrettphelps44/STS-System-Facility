@@ -14,9 +14,11 @@
   --hex: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
   /* Visible container border — --line alone is nearly invisible against --panel */
   --border-visible: #333d33;
-  /* Input border — matches the reference's own input styling (select/input rule) */
-  --input-border: #2c8f30;
-  --input-border-hover: #3fce43;
+  /* Input border tracks the accent — derived from --green via var()/color-mix()
+     so a facility's chosen color reaches these too, with zero JS beyond the
+     two vars applyBranding.js already sets. */
+  --input-border: var(--green);
+  --input-border-hover: color-mix(in srgb, var(--green) 80%, white);
   color-scheme: dark;
 }
 
@@ -153,7 +155,9 @@ h3,
   color: #000;
 }
 .hex.done {
-  background: #0c2f0d;
+  /* Previously a hardcoded dark-green tint, independent of the accent —
+     now tracks --green like everything else. */
+  background: color-mix(in srgb, var(--green) 22%, black);
   color: var(--green);
 }
 .step .steplabel {
@@ -274,6 +278,10 @@ input::placeholder {
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.btn-small {
+  padding: 8px 14px;
+  font-size: 11px;
 }
 .btn.primary,
 .btn[type='submit'] {

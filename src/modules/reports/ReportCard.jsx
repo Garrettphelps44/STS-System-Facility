@@ -16,15 +16,21 @@ const DIR_COLOR = { up: 'var(--green)', down: 'var(--gold)', flat: 'var(--muted)
 // that's the math underneath). Reused as-is by both the authenticated
 // in-app view and the anonymous share-link view.
 export function ReportCard({ report, onPrint, onShare, shareUrl }) {
-  const { name, sport, sex, generated, tests, attendance, program, trainingLoad30, history, assessment } = report
+  const { name, sport, sex, generated, tests, attendance, program, trainingLoad30, history, assessment, branding } = report
+  // Step 4: the facility's own name/logo, not STS's — this is what a
+  // parent or sport coach opening a share link should see. Falls back to
+  // STS only if a facility somehow has no branding row (shouldn't happen,
+  // create_facility() seeds one — see 0008_facility_branding.sql).
+  const displayName = branding?.displayName || 'Strength Through Systems'
+  const logoUrl = branding?.logoUrl || '/logo-s.png'
 
   return (
     <div style={{ maxWidth: 860 }}>
       <div className="brandbar" style={{ borderBottom: `2px solid var(--green)`, paddingBottom: 14, marginBottom: 18 }}>
         <div className="brandbar-left">
-          <img className="logo-s" src="/logo-s.png" alt="STS logo" />
+          <img className="logo-s" src={logoUrl} alt={`${displayName} logo`} />
           <div>
-            <div className="name">STRENGTH THROUGH <span>SYSTEMS</span></div>
+            <div className="name">{displayName}</div>
             <div className="sub" style={{ margin: 0 }}>Athlete Report</div>
           </div>
         </div>

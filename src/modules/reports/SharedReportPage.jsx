@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import * as api from './reportsApi'
 import { buildReport } from './reportBuilder'
 import { ReportCard } from './ReportCard'
+import { applyBrandingVars } from '../../theme/applyBranding'
 
 // No auth, no AuthProvider, no facility membership — this is the
 // anonymous no-login view a share link opens. Every field it renders
@@ -18,13 +19,18 @@ export function SharedReportPage({ token }) {
       .then((data) => {
         if (!active) return
         if (!data) { setError('This report link has expired or is no longer valid.'); return }
+        // No AuthProvider on this page (see App.jsx) — nothing else ever
+        // applies --green/--green-dim here, so this is the one place the
+        // anonymous path has to do it itself, straight off the RPC's own
+        // branding field.
+        applyBrandingVars(data.branding)
         setReport(buildReport(data.athlete, {
           entries: data.testEntries,
           metrics: data.metrics,
           attendanceRows: data.attendance,
           floorSessions: data.floorSessions,
           assessment: data.assessment,
-        }))
+        }, data.branding))
       })
       .catch((err) => active && setError(err.message))
       .finally(() => active && setLoading(false))

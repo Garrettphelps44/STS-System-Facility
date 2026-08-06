@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { InvitePanel } from './InvitePanel'
+import { BrandingSettings } from '../modules/branding/BrandingSettings'
 import { TrackerModule } from '../modules/tracker/TrackerModule'
 import { BuildProgramModule } from '../modules/build-program/BuildProgramModule'
 import { FloorLogModule } from '../modules/floor-log/FloorLogModule'
@@ -26,9 +27,12 @@ const MODE_LABELS = {
 export function AppShell() {
   const { membership, memberships, switchFacility, signOut } = useAuth()
   const isAthlete = membership.role === 'athlete'
+  const isOwner = membership.role === 'owner'
   const visibleModes = isAthlete ? ['reports'] : MODES
   const [mode, setMode] = useState(isAthlete ? 'reports' : 'build')
-  const activeMode = visibleModes.includes(mode) ? mode : 'reports'
+  // 'settings' isn't one of the six locked modules — kept out of MODES/
+  // MODE_LABELS entirely, reachable only via the owner-only button below.
+  const activeMode = mode === 'settings' && isOwner ? 'settings' : (visibleModes.includes(mode) ? mode : 'reports')
 
   return (
     <div className="wrap">
@@ -54,7 +58,17 @@ export function AppShell() {
             </label>
           )}
           <span className="brandbar-user">Signed in as {membership.role}</span>
-          <button className="btn logout ghost" type="button" onClick={signOut}>Sign out</button>
+          {isOwner && (
+            <button
+              className="btn ghost btn-small"
+              type="button"
+              aria-current={activeMode === 'settings'}
+              onClick={() => setMode('settings')}
+            >
+              Branding
+            </button>
+          )}
+          <button className="btn logout ghost btn-small" type="button" onClick={signOut}>Sign out</button>
         </div>
       </header>
 
@@ -73,7 +87,9 @@ export function AppShell() {
       </nav>
 
       <main>
-        {activeMode === 'track' ? (
+        {activeMode === 'settings' ? (
+          <BrandingSettings />
+        ) : activeMode === 'track' ? (
           <TrackerModule />
         ) : activeMode === 'build' ? (
           <BuildProgramModule />

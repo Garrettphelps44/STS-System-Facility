@@ -11,7 +11,7 @@ import { ReportCard } from './ReportCard'
 // nothing to filter client-side; the dropdown just naturally has one
 // option instead of hiding a real list.
 export function ReportsModule() {
-  const { membership } = useAuth()
+  const { membership, branding } = useAuth()
   const facilityId = membership.facilityId
   const isAthlete = membership.role === 'athlete'
 
@@ -45,11 +45,11 @@ export function ReportsModule() {
     setShareUrl('')
     const athlete = athletes.find((a) => a.id === selectedId)
     api.fetchAllReportData(facilityId, selectedId)
-      .then((data) => { if (active) setReport(buildReport(athlete, data)) })
+      .then((data) => { if (active) setReport(buildReport(athlete, data, branding)) })
       .catch((err) => active && setError(err.message))
       .finally(() => active && setReportLoading(false))
     return () => { active = false }
-  }, [selectedId, facilityId, athletes])
+  }, [selectedId, facilityId, athletes, branding])
 
   async function handleShare() {
     if (!selectedId) return

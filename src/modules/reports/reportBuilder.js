@@ -89,7 +89,11 @@ export function computeHistorySection(entries, metrics) {
   }
 }
 
-export function buildReport(athlete, { entries, metrics, attendanceRows, floorSessions, assessment }) {
+// branding: {displayName, logoUrl, accentColor, accentDim} | null — same
+// shape from both callers (the authenticated fetch and the anonymous
+// get_shared_report RPC), attached as-is so ReportCard has one field to
+// read regardless of which path built the report.
+export function buildReport(athlete, { entries, metrics, attendanceRows, floorSessions, assessment }, branding = null) {
   return {
     name: athlete.name,
     sport: athlete.sport || '',
@@ -101,5 +105,6 @@ export function buildReport(athlete, { entries, metrics, attendanceRows, floorSe
     trainingLoad30: computeTrainingLoad30(floorSessions),
     history: computeHistorySection(entries, metrics),
     assessment: assessment?.psc != null ? { psc: assessment.psc, assessedOn: assessment.assessed_on } : null,
+    branding,
   }
 }
