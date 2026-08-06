@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const blankForm = { name: '', sport: '', sex: '', feet: '', inches: '', gradYear: '' }
+const blankForm = { name: '', sport: '', sex: '', feet: '', inches: '' }
 
 function sexLabel(s) {
   return s === 'M' ? 'Male' : s === 'F' ? 'Female' : '—'
@@ -27,7 +27,6 @@ export function Roster({ athletes, onAdd, onUpdate, onDelete }) {
         name: form.name,
         sport: form.sport,
         sex: form.sex,
-        gradYear: form.gradYear === '' ? null : +form.gradYear,
         heightFeet: form.feet === '' ? null : +form.feet,
         heightInches: form.inches === '' ? null : +form.inches,
       })
@@ -79,18 +78,20 @@ export function Roster({ athletes, onAdd, onUpdate, onDelete }) {
       <h2>Roster</h2>
       <p className="sub">One athlete record — name, height, sport, sex — shared across the app. Enter once, use everywhere.</p>
 
-      <form className="panel" onSubmit={handleAdd} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
+      <form className="panel" onSubmit={handleAdd} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
         <input
           placeholder="Athlete name"
+          style={{ width: '160px' }}
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
         />
         <input
           placeholder="Sport (e.g. Football)"
+          style={{ width: '150px' }}
           value={form.sport}
           onChange={(e) => setForm((f) => ({ ...f, sport: e.target.value }))}
         />
-        <select value={form.sex} onChange={(e) => setForm((f) => ({ ...f, sex: e.target.value }))}>
+        <select style={{ width: '100px' }} value={form.sex} onChange={(e) => setForm((f) => ({ ...f, sex: e.target.value }))}>
           <option value="">Sex</option>
           <option value="M">Male</option>
           <option value="F">Female</option>
@@ -112,13 +113,6 @@ export function Roster({ athletes, onAdd, onUpdate, onDelete }) {
           style={{ width: '58px' }}
           value={form.inches}
           onChange={(e) => setForm((f) => ({ ...f, inches: e.target.value }))}
-        />
-        <input
-          type="number"
-          placeholder="Grad year"
-          style={{ width: '90px' }}
-          value={form.gradYear}
-          onChange={(e) => setForm((f) => ({ ...f, gradYear: e.target.value }))}
         />
         <button className="btn primary" type="submit" disabled={submitting}>
           + Add

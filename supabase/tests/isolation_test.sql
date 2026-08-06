@@ -131,6 +131,14 @@ values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Facility A Fall Program', 'sts-v1', '{}'::jsonb, current_date),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Facility B Fall Program', 'sts-v1', '{}'::jsonb, current_date);
 
+-- Added Phase 5.5 (0008_facility_branding.sql) — these facilities were
+-- seeded directly above, not through create_facility(), so they need an
+-- explicit branding row the way a real signup would get automatically.
+insert into public.facility_branding (facility_id, display_name)
+values
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Isolation Test — Facility A'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Isolation Test — Facility B');
+
 -- ---------------------------------------------------------------------
 -- 3. Assertion checks — each block impersonates one user (SET LOCAL
 --    ROLE authenticated + the request.jwt.claims sub PostgREST would
@@ -296,6 +304,54 @@ begin;
       values ('owner A cannot write into facility B attendance', true, 'insert correctly rejected: ' || sqlerrm);
     end;
   end $$;
+commit;
+
+-- 3l. Added Phase 5.5: positive control — owner A can read their own
+--     facility's branding row.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'owner A sees own facility_branding row',
+    count(*) = 1,
+    'got ' || count(*) || ' row(s)'
+  from public.facility_branding where facility_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+commit;
+
+-- 3m. Negative: owner A reading facility B's branding returns nothing.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'owner A cannot read facility B facility_branding',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.facility_branding where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+commit;
+
+-- 3n. Write isolation on facility_branding, same pattern as 3k: owner A
+--     attempting to UPDATE facility B's branding must affect zero rows.
+--     (This table's write policy is owner-only, not owner+coach like
+--     everything else — that role distinction was verified separately,
+--     live, against a real coach-role account during the Phase 5.5
+--     session; this check only re-confirms the cross-facility half.)
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  with attempt as (
+    update public.facility_branding
+    set display_name = 'HIJACKED'
+    where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    returning 1
+  )
+  insert into _test_results (check_name, passed, detail)
+  select
+    'owner A cannot write into facility B facility_branding',
+    count(*) = 0,
+    'update affected ' || count(*) || ' row(s)'
+  from attempt;
 commit;
 
 -- ---------------------------------------------------------------------

@@ -71,26 +71,28 @@ export function ReportsModule() {
 
   return (
     <div>
-      <p className="eyebrow">Reports</p>
-      <h2>Athlete Reports</h2>
-      <p className="sub">One page per athlete — testing, attendance, and training progress in one place.</p>
-      {error && <p className="error-text" role="alert">{error}</p>}
+      <div className="no-print">
+        <p className="eyebrow">Reports</p>
+        <h2>Athlete Reports</h2>
+        <p className="sub">One page per athlete — testing, attendance, and training progress in one place.</p>
+        {error && <p className="error-text" role="alert">{error}</p>}
 
-      {!isAthlete && athletes.length > 1 && (
-        <label className="field" style={{ maxWidth: 340 }}>
-          <span className="lab">Athlete</span>
-          <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-            <option value="">Select athlete…</option>
-            {athletes.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}{a.sport ? ` — ${a.sport}` : ''}</option>
-            ))}
-          </select>
-        </label>
-      )}
+        {!isAthlete && athletes.length > 1 && (
+          <label className="field" style={{ maxWidth: 340 }}>
+            <span className="lab">Athlete</span>
+            <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+              <option value="">Select athlete…</option>
+              {athletes.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}{a.sport ? ` — ${a.sport}` : ''}</option>
+              ))}
+            </select>
+          </label>
+        )}
 
-      {athletes.length === 0 && <p className="sub">No athletes yet — add one in Tracker first.</p>}
-      {!selectedId && athletes.length > 1 && <p className="sub">Pick an athlete to see their report.</p>}
-      {selectedId && reportLoading && <p className="sub">Loading report…</p>}
+        {athletes.length === 0 && <p className="sub">No athletes yet — add one in Tracker first.</p>}
+        {!selectedId && athletes.length > 1 && <p className="sub">Pick an athlete to see their report.</p>}
+        {selectedId && reportLoading && <p className="sub">Loading report…</p>}
+      </div>
 
       {report && !reportLoading && (
         <ReportCard

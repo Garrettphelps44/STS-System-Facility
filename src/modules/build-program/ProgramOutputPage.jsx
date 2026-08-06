@@ -114,16 +114,16 @@ export function ProgramOutputPage({ draft, programs, onLoadProgram, onNewProgram
       </div>
 
       <div className="sub" style={{ display: 'flex', gap: 16, margin: '0 0 12px' }}>
-        <span>Lifting</span>
-        <span>Conditioning</span>
-        <span>Both</span>
+        <span style={{ color: '#3b82f6', fontWeight: 700 }}>● Lifting</span>
+        <span style={{ color: '#f59e0b', fontWeight: 700 }}>● Conditioning</span>
+        <span style={{ color: '#a855f7', fontWeight: 700 }}>● Both</span>
       </div>
 
       {!draft.startDate ? (
         <p className="sub">Pick a start date to build the calendar.</p>
       ) : (
         <div className="panel" style={{ overflowX: 'auto' }}>
-          <table>
+          <table className="cal-table">
             <colgroup>
               <col />
               <col span={37} />
@@ -131,7 +131,7 @@ export function ProgramOutputPage({ draft, programs, onLoadProgram, onNewProgram
             <thead>
               <tr>
                 <th>{monthGrid[0]?.year}</th>
-                {CAL_WDL.map((d, i) => (
+                {Array.from({ length: 37 }, (_, i) => CAL_WDL[i % 7]).map((d, i) => (
                   <th key={i}>{d}</th>
                 ))}
               </tr>
@@ -149,7 +149,7 @@ export function ProgramOutputPage({ draft, programs, onLoadProgram, onNewProgram
                     ) : (
                       <td key={ci}>
                         {cell.hit ? (
-                          <button className="btn" style={{ padding: '6px 8px' }} type="button" aria-pressed={cell.key === openDateKey} data-type={cell.hit.type} onClick={() => setOpenDateKey(cell.key)}>
+                          <button className="btn" type="button" aria-pressed={cell.key === openDateKey} data-type={cell.hit.type} onClick={() => setOpenDateKey(cell.key)}>
                             <span>{cell.day}</span>
                             <span>{cell.hit.code}</span>
                           </button>

@@ -30,13 +30,14 @@ export function AppShell() {
   const isOwner = membership.role === 'owner'
   const visibleModes = isAthlete ? ['reports'] : MODES
   const [mode, setMode] = useState(isAthlete ? 'reports' : 'build')
+  const [inviteOpen, setInviteOpen] = useState(false)
   // 'settings' isn't one of the six locked modules — kept out of MODES/
   // MODE_LABELS entirely, reachable only via the owner-only button below.
   const activeMode = mode === 'settings' && isOwner ? 'settings' : (visibleModes.includes(mode) ? mode : 'reports')
 
   return (
     <div className="wrap">
-      <header className="brandbar">
+      <header className="brandbar no-print">
         <div className="brandbar-left">
           <img className="logo-s" src="/logo-s.png" alt="STS logo" />
           <div className="name">STRENGTH THROUGH <span>SYSTEMS</span></div>
@@ -68,11 +69,16 @@ export function AppShell() {
               Branding
             </button>
           )}
+          {!isAthlete && (
+            <button className="btn ghost btn-small" type="button" onClick={() => setInviteOpen(true)}>
+              Invite
+            </button>
+          )}
           <button className="btn logout ghost btn-small" type="button" onClick={signOut}>Sign out</button>
         </div>
       </header>
 
-      <nav style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '0 0 22px' }}>
+      <nav className="no-print" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '0 0 22px' }}>
         {visibleModes.map((m) => (
           <button
             className="btn"
@@ -105,7 +111,9 @@ export function AppShell() {
           <p>{MODE_LABELS[activeMode]} — not built yet (Phase 4).</p>
         )}
 
-        {!isAthlete && <InvitePanel facilityId={membership.facilityId} />}
+        {inviteOpen && (
+          <InvitePanel facilityId={membership.facilityId} onClose={() => setInviteOpen(false)} />
+        )}
       </main>
     </div>
   )

@@ -2,9 +2,9 @@ import { TrainingLoadChart } from './TrainingLoadChart'
 
 function StatCard({ label, value }) {
   return (
-    <div style={{ minWidth: '130px' }}>
-      <div className="eyebrow" style={{ fontSize: '10.5px', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: '24px', fontWeight: 900 }}>{value}</div>
+    <div className="stat-card" style={{ minWidth: '130px' }}>
+      <div className="eyebrow stat-card-label" style={{ fontSize: '10.5px', marginBottom: 4 }}>{label}</div>
+      <div className="stat-card-value" style={{ fontSize: '24px', fontWeight: 900 }}>{value}</div>
     </div>
   )
 }
@@ -24,9 +24,24 @@ export function ReportCard({ report, onPrint, onShare, shareUrl }) {
   const displayName = branding?.displayName || 'Strength Through Systems'
   const logoUrl = branding?.logoUrl || '/logo-s.png'
 
+  const athleteInfo = [sport, sex === 'M' ? 'Male' : sex === 'F' ? 'Female' : ''].filter(Boolean).join(', ')
+
   return (
     <div style={{ maxWidth: 860 }}>
-      <div className="brandbar" style={{ borderBottom: `2px solid var(--green)`, paddingBottom: 14, marginBottom: 18 }}>
+      {/* Print/PDF only: facility + player + info + date, one line —
+          replaces the two screen blocks below, which print hides. */}
+      <div
+        className="print-only"
+        style={{ borderBottom: '2px solid var(--green)', paddingBottom: 10, marginBottom: 14, alignItems: 'baseline', gap: 8, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}
+      >
+        <strong>{displayName}</strong>
+        <span className="sub" style={{ margin: 0 }}>&nbsp;·&nbsp;</span>
+        <strong>{name}</strong>
+        {athleteInfo && <span className="sub" style={{ margin: 0 }}>&nbsp;·&nbsp;{athleteInfo}</span>}
+        <span className="sub" style={{ margin: 0 }}>&nbsp;·&nbsp;Generated {new Date(generated).toLocaleDateString()}</span>
+      </div>
+
+      <div className="brandbar no-print" style={{ borderBottom: `2px solid var(--green)`, paddingBottom: 14, marginBottom: 18 }}>
         <div className="brandbar-left">
           <img className="logo-s" src={logoUrl} alt={`${displayName} logo`} />
           <div>
@@ -36,15 +51,15 @@ export function ReportCard({ report, onPrint, onShare, shareUrl }) {
         </div>
       </div>
 
-      <div className="panel">
-        <p className="eyebrow">{[sport, sex === 'M' ? 'Male' : sex === 'F' ? 'Female' : ''].filter(Boolean).join(' · ') || 'Athlete'}</p>
+      <div className="panel no-print">
+        <p className="eyebrow">{athleteInfo || 'Athlete'}</p>
         <h2>{name}</h2>
         <p className="sub">Generated {new Date(generated).toLocaleDateString()}</p>
       </div>
 
       <div className="panel">
         <p className="eyebrow">Summary</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+        <div className="report-summary-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
           <StatCard label="Tests logged" value={tests ? tests.count : 0} />
           <StatCard label="Attendance" value={attendance ? `${attendance.pct}%` : '—'} />
           <StatCard label="Training consistency" value={program?.adherence != null ? `${program.adherence}%` : '—'} />
@@ -88,7 +103,7 @@ export function ReportCard({ report, onPrint, onShare, shareUrl }) {
         )}
       </div>
 
-      <div className="panel">
+      <div className="panel no-print">
         <p className="eyebrow">Attendance</p>
         {attendance ? (
           <div style={{ display: 'flex', gap: '24px' }}>
@@ -122,12 +137,12 @@ export function ReportCard({ report, onPrint, onShare, shareUrl }) {
         </div>
       )}
 
-      <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+      <div className="no-print" style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
         {onPrint && <button className="btn ghost" type="button" onClick={onPrint}>Print / Save PDF</button>}
         {onShare && <button className="btn primary" type="button" onClick={onShare}>Share link</button>}
       </div>
       {shareUrl && (
-        <div style={{ marginTop: '8px' }}>
+        <div className="no-print" style={{ marginTop: '8px' }}>
           <input readOnly value={shareUrl} onClick={(e) => e.target.select()} style={{ width: '100%' }} />
         </div>
       )}

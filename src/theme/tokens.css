@@ -349,9 +349,130 @@ th {
   font-weight: 800;
 }
 
+/* Build Program's annual calendar — month rows x 37 day-of-month columns.
+   Fixed layout + tight padding so the whole width fits without side
+   scrolling on a normal screen; overflow-x on the wrapper is still there
+   as a fallback for genuinely narrow (phone) viewports. */
+.cal-table {
+  table-layout: fixed;
+  /* separate + spacing, not collapse — otherwise adjacent day numbers
+     (e.g. "22" then "23") have no visual gap and read as one blob at
+     this column width */
+  border-collapse: separate;
+  border-spacing: 2px 3px;
+}
+.cal-table th,
+.cal-table td {
+  padding: 3px 2px;
+  font-size: 10px;
+  text-align: center;
+  border-bottom: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.cal-table th:first-child,
+.cal-table td:first-child {
+  text-align: left;
+  font-size: 10.5px;
+  color: var(--muted);
+  width: 34px;
+}
+.cal-table .btn {
+  width: 100%;
+  padding: 3px 1px;
+  font-size: 9.5px;
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* Below ~700px, forcing 38 columns into the viewport makes every cell
+   illegible (single-digit-wide, numbers unreadable) — worse than
+   scrolling. Revert to natural column widths there and let the existing
+   overflow-x:auto wrapper scroll horizontally, same as before this
+   change; the no-scroll fit is for a real desktop/tablet screen. */
+@media (max-width: 700px) {
+  .cal-table {
+    table-layout: auto;
+  }
+  .cal-table th,
+  .cal-table td {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  .cal-table .btn {
+    width: auto;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+}
+
+/* Training-day color coding — fixed, non-brand colors (same reasoning
+   as TrainingLoadChart's planned/actual colors) so they stay distinct
+   from each other regardless of a facility's chosen accent. */
+.btn[data-type='lifting'] {
+  background: color-mix(in srgb, #3b82f6 18%, var(--panel-2));
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+.btn[data-type='conditioning'] {
+  background: color-mix(in srgb, #f59e0b 18%, var(--panel-2));
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+.btn[data-type='both'] {
+  background: color-mix(in srgb, #a855f7 18%, var(--panel-2));
+  border-color: #a855f7;
+  color: #a855f7;
+}
+
 .error-text {
   color: var(--gold);
   border-left: 2px solid var(--gold);
   padding-left: 10px;
   font-size: 13.5px;
+}
+
+/* Print/PDF only — used by AppShell's chrome + the Athlete Report
+   (ReportCard.jsx). Screen appearance is untouched outside @media
+   print; these classes are no-ops until an actual print/PDF happens. */
+.print-only {
+  display: none;
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: flex !important;
+  }
+  /* Grid, not flex-shrink — five fixed equal tracks so no card can ever
+     grow into its neighbor's space, regardless of content. flex-shrink +
+     min-width:0 looked right on screen but let long labels ("Training
+     Consistency") push into the adjacent card in an actual printed PDF.
+     Labels wrap (not truncate) so the full text always stays visible —
+     grid's non-overlapping columns are what stop the collision, not
+     cutting text off. */
+  .report-summary-row {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 6px !important;
+    align-items: start !important;
+  }
+  .report-summary-row .stat-card {
+    min-width: 0 !important;
+  }
+  .report-summary-row .stat-card-label {
+    white-space: normal;
+    word-break: break-word;
+    font-size: 8px !important;
+    line-height: 1.25;
+  }
+  .report-summary-row .stat-card-value {
+    font-size: 15px !important;
+    white-space: normal;
+    word-break: break-word;
+  }
 }
