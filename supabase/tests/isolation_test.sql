@@ -115,12 +115,6 @@ values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a2222222-0000-0000-0000-000000000002', current_date, 'vert', 26),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'b1111111-0000-0000-0000-000000000001', current_date, 'vert', 22);
 
-insert into public.floor_logs (facility_id, athlete_id, date, exercise, sets, reps, weight)
-values
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001', current_date, 'Back Squat', 1, 5, 225),
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a2222222-0000-0000-0000-000000000002', current_date, 'Back Squat', 1, 5, 205),
-  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'b1111111-0000-0000-0000-000000000001', current_date, 'Trap Bar Deadlift', 1, 5, 275);
-
 insert into public.attendance (facility_id, athlete_id, date, status)
 values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001', current_date, 'present'),
@@ -138,6 +132,62 @@ insert into public.facility_branding (facility_id, display_name)
 values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Isolation Test — Facility A'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Isolation Test — Facility B');
+
+-- Added this session: seed data for the five tables that had never had
+-- isolation coverage since they were introduced (teams/team_members,
+-- report_shares in Phase 2; invites in Phase 3; floor_sessions in Phase
+-- 4/Step 24; assessments in Phase 4/Step 26). All new IDs below use an
+-- 'a'-prefix (facility A) / 'b'-prefix (facility B) scheme matching the
+-- existing athlete/facility ID convention, with a second digit per table
+-- so nothing collides with the IDs already declared above.
+
+insert into public.teams (id, facility_id, name)
+values
+  ('a3333333-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Team A'),
+  ('b3333333-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Team B');
+
+insert into public.team_members (team_id, athlete_id, facility_id)
+values
+  ('a3333333-0000-0000-0000-000000000001', 'a1111111-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  ('a3333333-0000-0000-0000-000000000001', 'a2222222-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  ('b3333333-0000-0000-0000-000000000001', 'b1111111-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+
+insert into public.report_shares (id, facility_id, athlete_id)
+values
+  ('a6111111-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001'),
+  ('a6222222-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a2222222-0000-0000-0000-000000000002'),
+  ('b6111111-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'b1111111-0000-0000-0000-000000000001');
+
+insert into public.invites (id, facility_id, role)
+values
+  ('a9111111-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'coach'),
+  ('b9111111-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'coach');
+
+insert into public.floor_sessions (id, facility_id, athlete_id, date, projected)
+values
+  ('a7111111-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001', current_date, 100),
+  ('a7222222-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a2222222-0000-0000-0000-000000000002', current_date, 90),
+  ('b7111111-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'b1111111-0000-0000-0000-000000000001', current_date, 80);
+
+-- floor_logs seeded here, not up near test_entries/attendance, because it
+-- needs a real floor_sessions row to reference via session_id — the table
+-- was reshaped in 0005_floor_log.sql (Phase 4/Step 24) from a flat
+-- date/exercise/sets/reps/weight row to one row per logged SET, keyed to
+-- a session. This script's original floor_logs seed predates that
+-- reshape and was still using the old columns until this session, which
+-- is why running this file errored on "column date does not exist"
+-- before any of the new checks below even had a chance to run.
+insert into public.floor_logs (facility_id, athlete_id, session_id, exercise_index, exercise, set_index, weight, reps)
+values
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001', 'a7111111-0000-0000-0000-000000000001', 0, 'Back Squat', 0, 225, 5),
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a2222222-0000-0000-0000-000000000002', 'a7222222-0000-0000-0000-000000000002', 0, 'Back Squat', 0, 205, 5),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'b1111111-0000-0000-0000-000000000001', 'b7111111-0000-0000-0000-000000000001', 0, 'Trap Bar Deadlift', 0, 275, 5);
+
+insert into public.assessments (id, facility_id, athlete_id, psc, assessed_on)
+values
+  ('a8111111-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001', 500, current_date),
+  ('a8222222-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a2222222-0000-0000-0000-000000000002', 480, current_date),
+  ('b8111111-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'b1111111-0000-0000-0000-000000000001', 300, current_date);
 
 -- ---------------------------------------------------------------------
 -- 3. Assertion checks — each block impersonates one user (SET LOCAL
@@ -337,21 +387,162 @@ commit;
 --     everything else — that role distinction was verified separately,
 --     live, against a real coach-role account during the Phase 5.5
 --     session; this check only re-confirms the cross-facility half.)
+--
+--     NOT a data-modifying CTE (`with attempt as (update ... returning
+--     ...) insert into ... select ... from attempt`) — that form was
+--     tried first and reliably threw `relation "facility" does not
+--     exist` in the Supabase SQL Editor specifically, even though the
+--     identical UPDATE run bare (no CTE) proved the RLS logic itself is
+--     correct (own-facility update succeeds, cross-facility update
+--     silently affects 0 rows, no policy violation). Root-caused to the
+--     editor's own handling of that query shape, not a real bug — a
+--     plain UPDATE + GET DIAGNOSTICS inside a DO block sidesteps it.
 begin;
   set local role authenticated;
   select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
-  with attempt as (
+  do $$
+  declare
+    affected int;
+  begin
     update public.facility_branding
     set display_name = 'HIJACKED'
-    where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
-    returning 1
-  )
+    where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    get diagnostics affected = row_count;
+    insert into _test_results (check_name, passed, detail)
+    values (
+      'owner A cannot write into facility B facility_branding',
+      affected = 0,
+      'update affected ' || affected || ' row(s)'
+    );
+  end $$;
+commit;
+
+-- 3o. Negative: owner A reading facility B's teams returns nothing.
+--     (No athlete_id column on this table — same shape as programs/3f.)
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
   insert into _test_results (check_name, passed, detail)
   select
-    'owner A cannot write into facility B facility_branding',
+    'owner A cannot read facility B teams',
     count(*) = 0,
-    'update affected ' || count(*) || ' row(s)'
-  from attempt;
+    'got ' || count(*) || ' row(s)'
+  from public.teams where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+commit;
+
+-- 3p. Negative: owner A reading facility B's team_members returns nothing.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'owner A cannot read facility B team_members',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.team_members where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+commit;
+
+-- 3q. Athlete-role own-record check: athlete A cannot see teammate A2's
+--     team_members row, even within the same facility.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111112', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'athlete A cannot read teammate''s team_members row',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.team_members where athlete_id = 'a2222222-0000-0000-0000-000000000002';
+commit;
+
+-- 3r. Negative: owner A reading facility B's report_shares returns nothing.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'owner A cannot read facility B report_shares',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.report_shares where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+commit;
+
+-- 3s. Athlete-role own-record check: athlete A cannot see teammate A2's
+--     report_shares row.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111112', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'athlete A cannot read teammate''s report_shares row',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.report_shares where athlete_id = 'a2222222-0000-0000-0000-000000000002';
+commit;
+
+-- 3t. Negative: owner A reading facility B's invites returns nothing.
+--     (invites_select is can_write_facility-gated, not athlete-narrowed
+--     — this check covers facility isolation only, not the separate
+--     owner-vs-coach-vs-athlete permission question.)
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'owner A cannot read facility B invites',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.invites where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+commit;
+
+-- 3u. Negative: owner A reading facility B's floor_sessions returns nothing.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'owner A cannot read facility B floor_sessions',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.floor_sessions where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+commit;
+
+-- 3v. Athlete-role own-record check: athlete A cannot see teammate A2's
+--     floor_sessions row.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111112', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'athlete A cannot read teammate''s floor_sessions row',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.floor_sessions where athlete_id = 'a2222222-0000-0000-0000-000000000002';
+commit;
+
+-- 3w. Negative: owner A reading facility B's assessments returns nothing.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'owner A cannot read facility B assessments',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.assessments where facility_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+commit;
+
+-- 3x. Athlete-role own-record check: athlete A cannot see teammate A2's
+--     assessments row.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111112', 'role', 'authenticated')::text, true);
+  insert into _test_results (check_name, passed, detail)
+  select
+    'athlete A cannot read teammate''s assessments row',
+    count(*) = 0,
+    'got ' || count(*) || ' row(s)'
+  from public.assessments where athlete_id = 'a2222222-0000-0000-0000-000000000002';
 commit;
 
 -- ---------------------------------------------------------------------

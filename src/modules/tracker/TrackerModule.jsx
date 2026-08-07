@@ -11,11 +11,10 @@ const SUBTABS = [
   { key: 'dash', label: 'Leaderboards' },
 ]
 
-// Roster is intentionally NOT filtered — matches the old app (tRenderRoster
-// always renders every athlete; only Test Database and Leaderboards read
-// through filteredAthletes()). The filter bar itself stays visible across
-// all three subtabs regardless, same structural placement as the old
-// #trackFilterBar sitting above all three .subpage divs.
+// The Sport/Sex filter bar sits above all three subtabs (same structural
+// placement as the old #trackFilterBar) and scopes all three, including
+// Roster — a coach filtered to one sport only sees/adds/edits that sport's
+// athletes; switching back to "All sports" shows everyone again.
 export function TrackerModule() {
   const { membership } = useAuth()
   const facilityId = membership.facilityId
@@ -121,7 +120,7 @@ export function TrackerModule() {
 
       {subtab === 'roster' && (
         <Roster
-          athletes={athletes}
+          athletes={filteredAthletes}
           onAdd={async (input) => {
             await api.addAthlete(facilityId, input)
             await refreshAthletes()

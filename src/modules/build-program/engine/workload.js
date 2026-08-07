@@ -5,18 +5,12 @@
 //
 // value = height(m) x exercise_coeff x (weight x setMult x repMult x tempoMult) x 0.01
 //
-// KNOWN BUG INHERITED FROM THE SOURCE, NOT FIXED HERE ("port as-is, do
-// not rewrite"): 47 entries from "pogos" through "side single single
-// double skips" below are written as `(0.024750, 0.53)` instead of
-// `0.024750 * 0.53`. That's the JS comma operator, not a tuple — it
-// silently evaluates to just the second number, so every one of those
-// jump/plyo entries currently resolves to a coefficient of exactly
-// 0.53 (or 0.818/0.288/etc., whichever second value it has) regardless
-// of the first number, which is clearly supposed to be exercise-specific
-// like everywhere else in this table. Flagging prominently rather than
-// silently coding around it — this needs a decision (fix now in a
-// dedicated pass, or leave matching current production behavior) before
-// Floor Log/Assessment ship real workload numbers for these movements.
+// FIXED (was a bug inherited from the source): the 47 jump/plyo entries
+// from "pogos" through "side single single double skips" were written
+// as `(0.024750, 0.53)` instead of `0.024750 * 0.53` — the JS comma
+// operator, not a tuple, which silently evaluated to just 0.53 for all
+// 47 regardless of the first number. Corrected to real multiplication;
+// each entry now resolves to its own coefficient again.
 export const EXDB = {
   "two dowel stationary lunge": 0.540942 * 0.53,
   "contralateral dowel stationary lunge": 0.622004 * 0.53,
@@ -306,55 +300,53 @@ export const EXDB = {
   "single arm tricep extensions": 0.950973 * 0.186,
   "rolling triceps": 1.092381 * 0.186,
   "single arm oh tricep extension": 1.117985 * 0.186,
-  // ---- 47-entry comma-operator block, see file header note ----
-  "pogos": (0.024750, 0.53),
-  "assisted pogo hops": (0.002750, 0.53),
-  "pogo hops": (0.024750, 0.53),
-  "mb pogos": (0.099000, 0.53),
-  "db pogos": (0.123750, 0.53),
-  "db single leg pogos": (0.247500, 0.53),
-  "mb single leg pogos": (0.198000, 0.53),
-  "veritcal jump": (0.041250, 0.53),
-  "seated box jumps": (0.049500, 0.53),
-  "db squat jumps": (0.550000, 0.53),
-  "depth drop to vertical jump": (0.037125, 0.53),
-  "assisted vertical jump": (0.013750, 0.53),
-  "box jumps double jump": (0.022000, 0.53),
-  "assisted sl hops": (0.016500, 0.53),
-  "broad jump hard landing": (0.033000, 0.53),
-  "broad jump to single leg": (0.066000, 0.53),
-  "depth to broad jump": (0.024750, 0.53),
-  "bounds": (0.033000, 0.53),
-  "sl bounds": (0.066000, 0.53),
-  "depth drop to lateral jump": (0.033000, 0.53),
-  "double lateral jumps": (0.041250, 0.53),
-  "lateral jumps to single leg": (0.099000, 0.53),
-  "lateral jumps to both legs": (0.049500, 0.53),
-  "db seated box jumps": (0.247500, 0.53),
-  "mb seated box jumps": (0.198000, 0.53),
-  "mb depth drop to vertical jump": (0.148500, 0.53),
-  "db box jump double jump": (0.110000, 0.53),
-  "db depth drop to vertical jump": (0.185625, 0.53),
-  "mb box jump double jump": (0.088000, 0.53),
-  "db depth drop to broad jump": (0.225000, 0.53),
-  "mb depth drop to broad jump": (0.225000, 0.53),
-  "db depth drop to lateral jump": (0.375000, 0.53),
-  "mb depth drop to lateral jump": (0.375000, 0.53),
-  "db split jumps": (0.500000, 0.53),
-  "biloaded db snap down to vertical jump": (0.500000, 0.53),
-  "biloaded db snap down to ss to vertical jump": (0.500000, 0.53),
-  "barbell back squat jumps": (1.000000, 0.53),
-  "sl rdl + mb overhead press": (0.100000, 0.53),
-  "ffess stomp + sl rdl": (0.100000, 0.53),
-  "lunge mb stomp + sl rdl": (0.100000, 0.53),
-  "ffess stomp + sprinter pose": (0.100000, 0.53),
-  "ffess plate rotaiton + sprinter pose": (0.100000, 0.53),
-  "lunge mb stomp + sprinter pose": (0.100000, 0.53),
-  "skips for height": (0.250000, 0.53),
-  "skips for distance": (0.250000, 0.53),
-  "double a skips": (0.187500, 0.53),
-  "side single single double skips": (0.187500, 0.53),
-  // ---- end comma-operator block ----
+  "pogos": 0.024750 * 0.53,
+  "assisted pogo hops": 0.002750 * 0.53,
+  "pogo hops": 0.024750 * 0.53,
+  "mb pogos": 0.099000 * 0.53,
+  "db pogos": 0.123750 * 0.53,
+  "db single leg pogos": 0.247500 * 0.53,
+  "mb single leg pogos": 0.198000 * 0.53,
+  "veritcal jump": 0.041250 * 0.53,
+  "seated box jumps": 0.049500 * 0.53,
+  "db squat jumps": 0.550000 * 0.53,
+  "depth drop to vertical jump": 0.037125 * 0.53,
+  "assisted vertical jump": 0.013750 * 0.53,
+  "box jumps double jump": 0.022000 * 0.53,
+  "assisted sl hops": 0.016500 * 0.53,
+  "broad jump hard landing": 0.033000 * 0.53,
+  "broad jump to single leg": 0.066000 * 0.53,
+  "depth to broad jump": 0.024750 * 0.53,
+  "bounds": 0.033000 * 0.53,
+  "sl bounds": 0.066000 * 0.53,
+  "depth drop to lateral jump": 0.033000 * 0.53,
+  "double lateral jumps": 0.041250 * 0.53,
+  "lateral jumps to single leg": 0.099000 * 0.53,
+  "lateral jumps to both legs": 0.049500 * 0.53,
+  "db seated box jumps": 0.247500 * 0.53,
+  "mb seated box jumps": 0.198000 * 0.53,
+  "mb depth drop to vertical jump": 0.148500 * 0.53,
+  "db box jump double jump": 0.110000 * 0.53,
+  "db depth drop to vertical jump": 0.185625 * 0.53,
+  "mb box jump double jump": 0.088000 * 0.53,
+  "db depth drop to broad jump": 0.225000 * 0.53,
+  "mb depth drop to broad jump": 0.225000 * 0.53,
+  "db depth drop to lateral jump": 0.375000 * 0.53,
+  "mb depth drop to lateral jump": 0.375000 * 0.53,
+  "db split jumps": 0.500000 * 0.53,
+  "biloaded db snap down to vertical jump": 0.500000 * 0.53,
+  "biloaded db snap down to ss to vertical jump": 0.500000 * 0.53,
+  "barbell back squat jumps": 1.000000 * 0.53,
+  "sl rdl + mb overhead press": 0.100000 * 0.53,
+  "ffess stomp + sl rdl": 0.100000 * 0.53,
+  "lunge mb stomp + sl rdl": 0.100000 * 0.53,
+  "ffess stomp + sprinter pose": 0.100000 * 0.53,
+  "ffess plate rotaiton + sprinter pose": 0.100000 * 0.53,
+  "lunge mb stomp + sprinter pose": 0.100000 * 0.53,
+  "skips for height": 0.250000 * 0.53,
+  "skips for distance": 0.250000 * 0.53,
+  "double a skips": 0.187500 * 0.53,
+  "side single single double skips": 0.187500 * 0.53,
   "facing bilateral mb toss": 0.028792 * 0.818,
   "facing b stance mb toss": 0.028052 * 0.818,
   "side bilateral mb toss": 0.057585 * 0.818,
