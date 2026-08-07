@@ -91,50 +91,65 @@ export function TrackerModule() {
         ))}
       </div>
 
-      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 16 }}>
-        <label className="field" style={{ marginBottom: 0 }}>
-          <span className="lab">View</span>
-          <select value={filter.sport} onChange={(e) => setFilter((f) => ({ ...f, sport: e.target.value }))}>
-            <option value="">All sports</option>
-            {sports.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field" style={{ marginBottom: 0 }}>
-          <span className="lab">Sex</span>
-          <select value={filter.sex} onChange={(e) => setFilter((f) => ({ ...f, sex: e.target.value }))}>
-            <option value="">All athletes</option>
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-          </select>
-        </label>
-        <span className="sub">
-          {filter.sport || filter.sex
-            ? `Showing ${filteredAthletes.length} of ${athletes.length}`
-            : `${athletes.length} athlete${athletes.length !== 1 ? 's' : ''}`}
-        </span>
-      </div>
+      {(() => {
+        const filterBar = (
+          <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 16 }}>
+            <label className="field" style={{ marginBottom: 0 }}>
+              <span className="lab">View</span>
+              <select value={filter.sport} onChange={(e) => setFilter((f) => ({ ...f, sport: e.target.value }))}>
+                <option value="">All sports</option>
+                {sports.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field" style={{ marginBottom: 0 }}>
+              <span className="lab">Sex</span>
+              <select value={filter.sex} onChange={(e) => setFilter((f) => ({ ...f, sex: e.target.value }))}>
+                <option value="">All athletes</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+              </select>
+            </label>
+            <span className="sub">
+              {filter.sport || filter.sex
+                ? `Showing ${filteredAthletes.length} of ${athletes.length}`
+                : `${athletes.length} athlete${athletes.length !== 1 ? 's' : ''}`}
+            </span>
+          </div>
+        )
 
-      {subtab === 'roster' && (
-        <Roster
-          athletes={filteredAthletes}
-          onAdd={async (input) => {
-            await api.addAthlete(facilityId, input)
-            await refreshAthletes()
-          }}
-          onUpdate={async (id, patch) => {
-            await api.updateAthlete(id, patch)
-            await refreshAthletes()
-          }}
-          onDelete={async (id) => {
-            await api.deleteAthlete(id)
-            await Promise.all([refreshAthletes(), refreshEntries()])
-          }}
-        />
-      )}
+        if (subtab !== 'roster') return filterBar
+
+        // Roster only: filter bar and the roster sit side by side on the
+        // same line instead of stacked, each keeping its own panel border
+        // (filterBar's border, Roster's own form/table panel borders) —
+        // Garrett's call, doesn't apply to Test Database/Leaderboards.
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 16 }}>
+            <div style={{ flex: '0 0 260px' }}>{filterBar}</div>
+            <div style={{ flex: '1 1 480px', minWidth: 0 }}>
+              <Roster
+                athletes={filteredAthletes}
+                onAdd={async (input) => {
+                  await api.addAthlete(facilityId, input)
+                  await refreshAthletes()
+                }}
+                onUpdate={async (id, patch) => {
+                  await api.updateAthlete(id, patch)
+                  await refreshAthletes()
+                }}
+                onDelete={async (id) => {
+                  await api.deleteAthlete(id)
+                  await Promise.all([refreshAthletes(), refreshEntries()])
+                }}
+              />
+            </div>
+          </div>
+        )
+      })()}
 
       {subtab === 'db' && (
         <TestDatabase
