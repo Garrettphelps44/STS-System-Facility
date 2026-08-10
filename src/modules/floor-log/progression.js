@@ -70,3 +70,48 @@ export function progressedPSC(psc, weekTotals, week, dayIndex, D) {
   const i = dayIndex == null || dayIndex < 0 ? 0 : Math.min(dayIndex, shares.length - 1)
   return Math.round(T * shares[i] * 100) / 100
 }
+
+// Floor Log auto-fill, per-exercise (not the whole-session A:C math
+// above). A main (assessed) movement's *first-ever* appearance — week 1,
+// or whatever week it happens to first show up in the program — starts
+// at 80-85% of its assessed weight. That's a one-time calibration point,
+// not a ramp: once the exercise has been logged for real even once,
+// priorWeekWeights below takes over completely and this constant is
+// never consulted for that exercise again. Garrett's call — an athlete
+// getting stronger will eventually need more than 100% of an assessed
+// number that's weeks old, so the auto-fill must never keep anchoring
+// back to it once real data exists; only the actual logged weight (which
+// the coach can push past the assessed number by hand at any time)
+// should drive what comes next.
+export const MAIN_LIFT_FIRST_PCT = 0.825
+
+// Reuse whatever the athlete actually lifted for an exercise the most
+// recent prior week, rather than recomputing anything — a coach's manual
+// edit last week IS the number, and it carries forward until they change
+// it again. Applies to every exercise, assessed or not: real entered
+// data always outranks a formula. Returns { [exercise]: weight },
+// resolved against the program's calendar so "prior week" means program
+// week, not raw dates. `exerciseHistory` is [{date, exercise, setIndex,
+// weight}] across every logged set for the athlete; when the same
+// exercise has multiple weeks of history before `beforeWeek`, only the
+// latest one counts, and within that week the highest set_index (the
+// last set actually logged) wins.
+export function priorWeekWeights(exerciseHistory, program, beforeWeek) {
+  const days = (program.constraints || {}).days || {}
+  const calMap = buildCalMap(program.start_date, days)
+  const byExercise = {}
+  exerciseHistory.forEach(({ date, exercise, setIndex, weight }) => {
+    if (weight == null || !exercise) return
+    const hit = calMap[date]
+    if (!hit || hit.week == null || hit.week >= beforeWeek) return
+    const weeks = byExercise[exercise] || (byExercise[exercise] = {})
+    const prev = weeks[hit.week]
+    if (!prev || setIndex >= prev.setIndex) weeks[hit.week] = { weight, setIndex }
+  })
+  const lookup = {}
+  Object.entries(byExercise).forEach(([exercise, weeks]) => {
+    const latestWeek = Math.max(...Object.keys(weeks).map(Number))
+    lookup[exercise] = weeks[latestWeek].weight
+  })
+  return lookup
+}

@@ -42,6 +42,30 @@ export async function fetchAthleteHistory(facilityId, athleteId) {
   return sessions.map((s) => ({ date: s.date, total: s.asc_override != null ? Number(s.asc_override) : (sums[s.id] || 0) }))
 }
 
+// Every logged set (date/exercise/set_index/weight) across an athlete's
+// whole floor-log history — the raw material for finding "what did they
+// actually lift for this exercise, most recently" (progression.js's
+// priorWeekWeights), as opposed to fetchAthleteHistory's per-session
+// totals used by the whole-session A:C progression.
+export async function fetchAthleteExerciseHistory(facilityId, athleteId) {
+  const { data: sessions, error: sessErr } = await supabase
+    .from('floor_sessions')
+    .select('id, date')
+    .eq('facility_id', facilityId)
+    .eq('athlete_id', athleteId)
+  if (sessErr) throw sessErr
+  if (!sessions.length) return []
+  const ids = sessions.map((s) => s.id)
+  const dateById = Object.fromEntries(sessions.map((s) => [s.id, s.date]))
+  const { data: logs, error: logErr } = await supabase
+    .from('floor_logs')
+    .select('session_id, exercise, set_index, weight')
+    .in('session_id', ids)
+    .not('weight', 'is', null)
+  if (logErr) throw logErr
+  return logs.map((l) => ({ date: dateById[l.session_id], exercise: l.exercise, setIndex: l.set_index, weight: Number(l.weight) }))
+}
+
 export async function fetchLogs(sessionId) {
   const { data, error } = await supabase
     .from('floor_logs')

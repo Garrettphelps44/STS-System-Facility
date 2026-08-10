@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as api from './floorLogApi'
 import * as assessmentApi from '../assessment/assessmentApi'
-import { planSetsFromTarget, resolveDaySession, roundPlate } from './floorEngine'
-import { athleteWeekTotals, progressedPSC } from './progression'
+import { isBarbellMovement, resolveDaySession, roundPlate } from './floorEngine'
+import { athleteWeekTotals, progressedPSC, MAIN_LIFT_FIRST_PCT, priorWeekWeights } from './progression'
 import { EXDB, EXNAMES, wkValue } from '../build-program/engine/workload'
+
+// "Light recommendation" for an exercise with no assessment number to
+// scale off of: a flat, conservative starting point — empty bar for a
+// barbell movement, nothing (coach sets it by feel on set 1) otherwise.
+// NOT solved from a share of the day's PSC target — tried that first and
+// it produced a 395 lb "light" cable row and floor press next to a 150
+// lb back squat, because EXDB coefficients differ by orders of magnitude
+// across exercise types, so inverting a shared target value into a
+// weight blows up for anything that isn't a big compound lift.
+const EMPTY_BAR_WEIGHT = 45
 
 function groupLogs(rows) {
   const map = new Map()
@@ -81,28 +91,49 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
             if (rows.length) {
               const ft = athlete.height_feet
               const inch = athlete.height_inches
-              let A0 = 0
-              const matches = []
+              const week = day.week || 1
+
+              // Real entered data always wins, whenever it exists — the
+              // athlete's own most recent prior week's actual logged
+              // weight for that exact exercise, assessed or not. Only
+              // fetched when it could possibly apply (week > 1); every
+              // exercise's first-ever appearance (week 1, or a movement
+              // that's new to the program later on) has no prior data by
+              // definition and falls to the calibration/light branches
+              // below instead.
+              const priorWeights = week > 1
+                ? priorWeekWeights(await api.fetchAthleteExerciseHistory(facilityId, athlete.id), program, week)
+                : {}
+
+              const updates = [] // { id, weight, value }
               rows.forEach((row) => {
+                const prior = priorWeights[row.exercise]
                 const b = assessment.weights?.[row.exercise]
-                if (b == null) return
-                const r = row.reps
-                const ns = planSetsFromTarget(row.target)
-                let av = 0
-                for (let si = 1; si <= ns; si++) {
-                  const v = wkValue(row.exercise, ft, inch, si, b, r, null)
-                  if (v != null) av += v
+                let w
+                if (prior != null) {
+                  // Carry forward last week's real number, uncapped —
+                  // a coach's manual bump above the assessed weight
+                  // stays the new basis, since the athlete getting
+                  // stronger will eventually need more than 100% of an
+                  // assessment that's weeks old.
+                  w = prior
+                } else if (b != null) {
+                  // First time this assessed movement has ever been
+                  // logged: a one-time 80-85% calibration point.
+                  w = roundPlate(b * MAIN_LIFT_FIRST_PCT, row.exercise)
+                } else if (isBarbellMovement(row.exercise)) {
+                  // No prior data, no assessment: empty bar, nothing
+                  // fancier — the coach sets the real number by feel.
+                  w = EMPTY_BAR_WEIGHT
+                } else {
+                  return // leave blank
                 }
-                matches.push({ row, b, r })
-                A0 += av
+                const v = wkValue(row.exercise, ft, inch, 1, w, row.reps, null)
+                updates.push({ id: row.id, weight: w, value: v })
               })
-              if (A0 > 0) {
-                const k = psc / A0
-                for (const m of matches) {
-                  const w = roundPlate(m.b * k, m.row.exercise)
-                  const v = wkValue(m.row.exercise, ft, inch, 1, w, m.r, null)
-                  await api.updateSet(m.row.id, { weight: w, value: v })
-                }
+
+              if (updates.length) {
+                await Promise.all(updates.map((u) => api.updateSet(u.id, { weight: u.weight, value: u.value })))
                 rows = await api.fetchLogs(sess.id)
               }
             }

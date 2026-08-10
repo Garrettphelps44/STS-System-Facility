@@ -14,12 +14,15 @@ export function setsRepsFrom(vol) {
   return { rx, sets: m ? +m[1] : 1, reps: m ? +m[2] : null }
 }
 
+export function isBarbellMovement(key) {
+  return /(^|\s)bb |^back squat|^front squat|conventional deadlift|trap bar/.test(key || '')
+}
+
 // Ported from reference/reference:Index.html (roundPlate, ~line 3138) —
 // rounds an auto-prescribed weight to a plate-friendly number.
 export function roundPlate(v, key) {
-  const barbell = /(^|\s)bb |^back squat|^front squat|conventional deadlift|trap bar/.test(key || '')
   const r = Math.max(5, Math.round(v / 5) * 5)
-  return barbell ? Math.max(45, r) : r
+  return isBarbellMovement(key) ? Math.max(45, r) : r
 }
 
 // Ported from reference/reference:Index.html (planSets, ~line 3158) —
