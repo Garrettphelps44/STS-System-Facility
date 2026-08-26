@@ -214,7 +214,7 @@ export function AttendanceModule() {
 
       {teams.length > 0 && (
         <div className="panel" style={{ overflowX: 'auto' }}>
-          <table>
+          <table className="table-compact">
             <thead>
               <tr>
                 <th>Team</th>

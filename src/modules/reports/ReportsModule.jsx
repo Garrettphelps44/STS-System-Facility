@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../auth/AuthContext'
 import * as trackerApi from '../tracker/trackerApi'
 import * as api from './reportsApi'
 import { buildReport } from './reportBuilder'
 import { ReportCard } from './ReportCard'
 
+function athleteLabel(a) {
+  return a ? a.name + (a.sport ? ` — ${a.sport}` : '') : ''
+}
+
 // Athlete-role scoping here is a UX convenience, not the security
 // boundary — trackerApi.fetchAthletes already only returns this user's
 // own row for an athlete-role session (athletes_select RLS), so there's
-// nothing to filter client-side; the dropdown just naturally has one
+// nothing to filter client-side; the picker just naturally has one
 // option instead of hiding a real list.
 export function ReportsModule() {
   const { membership, branding } = useAuth()
@@ -17,6 +21,8 @@ export function ReportsModule() {
 
   const [athletes, setAthletes] = useState([])
   const [selectedId, setSelectedId] = useState('')
+  const [query, setQuery] = useState('')
+  const [showOptions, setShowOptions] = useState(false)
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [reportLoading, setReportLoading] = useState(false)
@@ -24,13 +30,24 @@ export function ReportsModule() {
   const [shareUrl, setShareUrl] = useState('')
   const [sharing, setSharing] = useState(false)
 
+  const selectedAthlete = useMemo(() => athletes.find((a) => a.id === selectedId) || null, [athletes, selectedId])
+  const filteredAthletes = useMemo(() => {
+    const t = query.toLowerCase()
+    return athletes.filter((a) => a.name.toLowerCase().includes(t))
+  }, [athletes, query])
+
+  function pickAthlete(id) {
+    setSelectedId(id)
+    setQuery(athleteLabel(athletes.find((a) => a.id === id)))
+  }
+
   useEffect(() => {
     let active = true
     trackerApi.fetchAthletes(facilityId)
       .then((a) => {
         if (!active) return
         setAthletes(a)
-        if (a.length === 1) setSelectedId(a[0].id)
+        if (a.length === 1) { setSelectedId(a[0].id); setQuery(athleteLabel(a[0])) }
       })
       .catch((err) => active && setError(err.message))
       .finally(() => active && setLoading(false))
@@ -78,14 +95,26 @@ export function ReportsModule() {
         {error && <p className="error-text" role="alert">{error}</p>}
 
         {!isAthlete && athletes.length > 1 && (
-          <label className="field" style={{ maxWidth: 340 }}>
+          <label className="field" style={{ maxWidth: 340, position: 'relative' }}>
             <span className="lab">Athlete</span>
-            <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-              <option value="">Select athlete…</option>
-              {athletes.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}{a.sport ? ` — ${a.sport}` : ''}</option>
-              ))}
-            </select>
+            <input
+              placeholder="Select athlete…"
+              autoComplete="off"
+              value={query}
+              onFocus={() => { setQuery(''); setShowOptions(true) }}
+              onChange={(e) => { setQuery(e.target.value); setShowOptions(true) }}
+              onBlur={() => setTimeout(() => { setShowOptions(false); setQuery(athleteLabel(selectedAthlete)) }, 200)}
+            />
+            {showOptions && (
+              <div className="panel" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, padding: 8, maxHeight: 220, overflowY: 'auto' }}>
+                {!filteredAthletes.length && <div className="sub">No athletes match</div>}
+                {filteredAthletes.map((a) => (
+                  <div key={a.id} onMouseDown={(e) => { e.preventDefault(); setShowOptions(false); pickAthlete(a.id) }} style={{ padding: '8px 6px', cursor: 'pointer' }}>
+                    {a.name}{a.sport ? <small className="sub"> — {a.sport}</small> : null}
+                  </div>
+                ))}
+              </div>
+            )}
           </label>
         )}
 

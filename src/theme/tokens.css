@@ -388,6 +388,24 @@ th {
   gap: 0;
 }
 
+/* Compact table variant — Attendance's team/date grid and Test
+   Database's metric grid both add a column per date/test, so they hit
+   horizontal scroll sooner than the app's default th/td/input/.btn
+   padding (sized for forms and standalone buttons, not a dense data
+   grid) allows. Scoped to these two grids only — the global input/table
+   rules everywhere else (Roster, Build Program, auth forms, etc.) are
+   untouched. */
+.table-compact th,
+.table-compact td {
+  padding: 5px 7px;
+}
+.table-compact input:not([type='checkbox']):not([type='radio']) {
+  padding: 6px 8px;
+}
+.table-compact .btn {
+  padding: 6px 12px;
+}
+
 /* Below ~700px, forcing 38 columns into the viewport makes every cell
    illegible (single-digit-wide, numbers unreadable) — worse than
    scrolling. Revert to natural column widths there and let the existing

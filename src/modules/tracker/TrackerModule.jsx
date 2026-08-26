@@ -154,6 +154,7 @@ export function TrackerModule() {
       {subtab === 'db' && (
         <TestDatabase
           athletes={filteredAthletes}
+          allAthletes={athletes}
           metrics={metrics}
           entries={entries}
           onUpsertEntry={async (input) => {

@@ -19,7 +19,7 @@ function csvCell(s) {
 // upsertEntry's "null = clear this cell" rule) — it just jumps the grid
 // to that date, ready for input. The date only appears in the dropdown
 // once a value is actually typed.
-export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddMetric, onDeactivateMetric }) {
+export function TestDatabase({ athletes, allAthletes, metrics, entries, onUpsertEntry, onAddMetric, onDeactivateMetric }) {
   const knownDates = useMemo(() => [...new Set(entries.map((e) => e.date))].sort(), [entries])
   const [selectedDate, setSelectedDate] = useState(knownDates[knownDates.length - 1] || '')
   const [newDateInput, setNewDateInput] = useState('')
@@ -27,7 +27,33 @@ export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddM
   const [metricUnit, setMetricUnit] = useState('')
   const [metricHigher, setMetricHigher] = useState('1')
 
+  // Ad-hoc testing group: pick specific athletes across sport/sex lines
+  // (e.g. 5 kids from 5 different teams getting a vertical retest today)
+  // instead of the Sport/Sex filter bar's whole-group scoping above.
+  // Empty = no override, grid shows the normal filtered `athletes` list.
+  const [testGroupIds, setTestGroupIds] = useState([])
+  const [groupQuery, setGroupQuery] = useState('')
+  const [showGroupOptions, setShowGroupOptions] = useState(false)
+
   const activeMetrics = useMemo(() => metrics.filter((m) => m.active), [metrics])
+
+  const groupSearchPool = allAthletes || athletes
+  const groupOptions = useMemo(() => {
+    const t = groupQuery.toLowerCase()
+    return groupSearchPool.filter((a) => !testGroupIds.includes(a.id) && a.name.toLowerCase().includes(t))
+  }, [groupSearchPool, testGroupIds, groupQuery])
+
+  function addToTestGroup(id) {
+    setTestGroupIds((cur) => (cur.includes(id) ? cur : [...cur, id]))
+    setGroupQuery('')
+  }
+  function removeFromTestGroup(id) {
+    setTestGroupIds((cur) => cur.filter((x) => x !== id))
+  }
+
+  const displayAthletes = testGroupIds.length
+    ? groupSearchPool.filter((a) => testGroupIds.includes(a.id))
+    : athletes
 
   const dateOptions = useMemo(() => {
     const set = new Set(knownDates)
@@ -63,7 +89,7 @@ export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddM
   }
 
   function handleExport() {
-    const byAthlete = new Map(athletes.map((a) => [a.id, a]))
+    const byAthlete = new Map(displayAthletes.map((a) => [a.id, a]))
 
     // Group entries by athlete+date so each CSV row carries every metric's
     // value together, matching the old app's one-row-per-athlete-per-date export.
@@ -134,6 +160,47 @@ export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddM
         </button>
       </div>
 
+      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 16 }}>
+        <label className="field" style={{ flex: '1 1 260px', minWidth: 220, marginBottom: 0, position: 'relative' }}>
+          <span className="lab">Test specific athletes (any sport/sex)</span>
+          <input
+            placeholder="Search a name to add…"
+            autoComplete="off"
+            value={groupQuery}
+            onFocus={() => setShowGroupOptions(true)}
+            onChange={(e) => { setGroupQuery(e.target.value); setShowGroupOptions(true) }}
+            onBlur={() => setTimeout(() => setShowGroupOptions(false), 200)}
+          />
+          {showGroupOptions && (
+            <div className="panel" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, padding: 8, maxHeight: 220, overflowY: 'auto' }}>
+              {!groupOptions.length && <div className="sub">No matching athletes</div>}
+              {groupOptions.map((a) => (
+                <div key={a.id} onMouseDown={(e) => { e.preventDefault(); addToTestGroup(a.id) }} style={{ padding: '8px 6px', cursor: 'pointer' }}>
+                  {a.name}{a.sport ? <small className="sub"> — {a.sport}</small> : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </label>
+        {testGroupIds.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', flex: '1 1 260px' }}>
+            {testGroupIds.map((id) => {
+              const a = groupSearchPool.find((x) => x.id === id)
+              if (!a) return null
+              return (
+                <span key={id} className="btn ghost btn-small" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'default' }}>
+                  {a.name}
+                  <span role="button" style={{ cursor: 'pointer' }} title="Remove from test group" onClick={() => removeFromTestGroup(id)}>✕</span>
+                </span>
+              )
+            })}
+            <button className="btn ghost btn-small" type="button" onClick={() => setTestGroupIds([])}>
+              Show all athletes
+            </button>
+          </div>
+        )}
+      </div>
+
       <form className="panel" onSubmit={handleAddMetric} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
         <label className="field" style={{ marginBottom: 0 }}>
           <span className="lab">Add test</span>
@@ -152,13 +219,13 @@ export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddM
       </form>
       <p className="sub">Tap the ✕ on any column to stop tracking that test.</p>
 
-      {athletes.length === 0 ? (
-        <p className="sub">Add athletes on the Roster tab first.</p>
+      {displayAthletes.length === 0 ? (
+        <p className="sub">{testGroupIds.length ? 'No matching athletes for this test group.' : 'Add athletes on the Roster tab first.'}</p>
       ) : !selectedDate ? (
         <p className="sub">Add a test date to start logging.</p>
       ) : (
         <div className="panel" style={{ overflowX: 'auto' }}>
-        <table>
+        <table className="table-compact">
           <thead>
             <tr>
               <th>Athlete</th>
@@ -174,7 +241,7 @@ export function TestDatabase({ athletes, metrics, entries, onUpsertEntry, onAddM
             </tr>
           </thead>
           <tbody>
-            {athletes.map((a) => (
+            {displayAthletes.map((a) => (
               <tr key={a.id}>
                 <td>{a.name}</td>
                 {activeMetrics.map((m) => {
