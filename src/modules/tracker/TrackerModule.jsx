@@ -71,12 +71,6 @@ export function TrackerModule() {
     [athletes, filter]
   )
 
-  async function handleReset() {
-    if (!window.confirm('Clear all athletes, tests, and floor logs? Your built program stays.')) return
-    await api.resetRoster(facilityId)
-    await Promise.all([refreshAthletes(), refreshEntries()])
-  }
-
   if (loading) return <p className="sub">Loading roster…</p>
   if (error) return <p className="error-text" role="alert">{error}</p>
 
@@ -155,6 +149,8 @@ export function TrackerModule() {
         <TestDatabase
           athletes={filteredAthletes}
           allAthletes={athletes}
+          filterActive={!!(filter.sport || filter.sex)}
+          filterKey={`${filter.sport}|${filter.sex}`}
           metrics={metrics}
           entries={entries}
           onUpsertEntry={async (input) => {
@@ -173,12 +169,6 @@ export function TrackerModule() {
       )}
 
       {subtab === 'dash' && <Leaderboards athletes={filteredAthletes} metrics={metrics} entries={entries} />}
-
-      <div style={{ textAlign: 'right', marginTop: '14px' }}>
-        <button className="btn ghost" type="button" onClick={handleReset}>
-          Reset tracker data
-        </button>
-      </div>
     </div>
   )
 }

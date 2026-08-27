@@ -44,14 +44,6 @@ export async function deleteAthlete(id) {
   if (error) throw error
 }
 
-// Reset: wipes the roster (and, via cascade, every test_entries/floor_logs
-// row tied to it) but leaves metrics and programs alone — same scope as
-// the old app's resetTrack, which never touched track.metrics.
-export async function resetRoster(facilityId) {
-  const { error } = await supabase.from('athletes').delete().eq('facility_id', facilityId)
-  if (error) throw error
-}
-
 // ---------- metrics ----------
 
 export async function fetchMetrics(facilityId) {

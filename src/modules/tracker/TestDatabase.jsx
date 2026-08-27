@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { flyMPH } from './metrics'
 
 function todayStr() {
@@ -11,33 +11,54 @@ function csvCell(s) {
   return /[,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
 }
 
-// Dates come from whatever test_entries actually exist (no separate dates
-// table), same source the old app used (tDates() scanning track.entries).
-// "+ Add date" doesn't pre-insert empty rows the way the old blob model
-// did (there's nothing to attach an empty row to in a normalized table
-// without seeding null values that would immediately vanish under
-// upsertEntry's "null = clear this cell" rule) — it just jumps the grid
-// to that date, ready for input. The date only appears in the dropdown
-// once a value is actually typed.
-export function TestDatabase({ athletes, allAthletes, metrics, entries, onUpsertEntry, onAddMetric, onDeactivateMetric }) {
+function cellKey(athleteId, metricKey) {
+  return athleteId + '|' + metricKey
+}
+
+// Test Database is a deliberate session, not a live-editing spreadsheet:
+// nothing shows until you pick who you're testing (a sport/sex filter
+// above, specific athletes below, or a past test date to review), you
+// enter values freely, then Save commits them and clears the screen —
+// Garrett's call, so the grid never sits there half-filled from a
+// previous session. Cells are uncontrolled and only read (via cellRefs)
+// at Save time; nothing persists on blur anymore.
+export function TestDatabase({ athletes, allAthletes, filterActive, filterKey, metrics, entries, onUpsertEntry, onAddMetric, onDeactivateMetric }) {
   const knownDates = useMemo(() => [...new Set(entries.map((e) => e.date))].sort(), [entries])
-  const [selectedDate, setSelectedDate] = useState(knownDates[knownDates.length - 1] || '')
+  const [selectedDate, setSelectedDate] = useState(todayStr())
   const [newDateInput, setNewDateInput] = useState('')
   const [metricLabel, setMetricLabel] = useState('')
   const [metricUnit, setMetricUnit] = useState('')
   const [metricHigher, setMetricHigher] = useState('1')
+  const [saving, setSaving] = useState(false)
+  const [notice, setNotice] = useState('')
 
   // Ad-hoc testing group: pick specific athletes across sport/sex lines
   // (e.g. 5 kids from 5 different teams getting a vertical retest today)
   // instead of the Sport/Sex filter bar's whole-group scoping above.
-  // Empty = no override, grid shows the normal filtered `athletes` list.
   const [testGroupIds, setTestGroupIds] = useState([])
   const [groupQuery, setGroupQuery] = useState('')
   const [showGroupOptions, setShowGroupOptions] = useState(false)
 
-  const activeMetrics = useMemo(() => metrics.filter((m) => m.active), [metrics])
+  // Blanks the grid after a Save/Cancel until a new, deliberate selection
+  // is made (a different date, a changed sport/sex filter, or picking
+  // another individual athlete) — see the handlers below, each of which
+  // flips this back to false. Without this, re-showing "whoever has an
+  // entry on the selected date" would immediately re-reveal the athletes
+  // you just saved, since they now have an entry on that very date.
+  const [justSaved, setJustSaved] = useState(false)
 
+  // Live fly-10 mph hint as you type, without persisting anything —
+  // purely a client-side computed display, doesn't touch the deferred-
+  // save behavior for the actual value.
+  const [flyLive, setFlyLive] = useState({})
+
+  const cellRefs = useRef(new Map())
+
+  const activeMetrics = useMemo(() => metrics.filter((m) => m.active), [metrics])
   const groupSearchPool = allAthletes || athletes
+
+  useEffect(() => { setJustSaved(false) }, [filterKey])
+
   const groupOptions = useMemo(() => {
     const t = groupQuery.toLowerCase()
     return groupSearchPool.filter((a) => !testGroupIds.includes(a.id) && a.name.toLowerCase().includes(t))
@@ -46,18 +67,39 @@ export function TestDatabase({ athletes, allAthletes, metrics, entries, onUpsert
   function addToTestGroup(id) {
     setTestGroupIds((cur) => (cur.includes(id) ? cur : [...cur, id]))
     setGroupQuery('')
+    setJustSaved(false)
   }
   function removeFromTestGroup(id) {
     setTestGroupIds((cur) => cur.filter((x) => x !== id))
   }
 
-  const displayAthletes = testGroupIds.length
-    ? groupSearchPool.filter((a) => testGroupIds.includes(a.id))
-    : athletes
+  function selectDate(date) {
+    setSelectedDate(date)
+    setTestGroupIds([])
+    setJustSaved(false)
+    setNotice('')
+  }
+
+  const athletesWithEntriesOnDate = useMemo(() => {
+    const ids = new Set(entries.filter((e) => e.date === selectedDate && e.value != null).map((e) => e.athlete_id))
+    return groupSearchPool.filter((a) => ids.has(a.id))
+  }, [entries, selectedDate, groupSearchPool])
+
+  const displayAthletes = useMemo(() => {
+    if (justSaved) return []
+    const ids = new Set()
+    athletesWithEntriesOnDate.forEach((a) => ids.add(a.id))
+    testGroupIds.forEach((id) => ids.add(id))
+    if (filterActive) athletes.forEach((a) => ids.add(a.id))
+    return groupSearchPool.filter((a) => ids.has(a.id))
+  }, [justSaved, athletesWithEntriesOnDate, testGroupIds, filterActive, athletes, groupSearchPool])
+
+  const isReviewingHistory = athletesWithEntriesOnDate.length > 0 && !justSaved
 
   const dateOptions = useMemo(() => {
     const set = new Set(knownDates)
-    if (selectedDate) set.add(selectedDate)
+    set.add(todayStr())
+    set.add(selectedDate)
     return [...set].sort()
   }, [knownDates, selectedDate])
 
@@ -65,13 +107,8 @@ export function TestDatabase({ athletes, allAthletes, metrics, entries, onUpsert
     return entries.find((e) => e.athlete_id === athleteId && e.metric_key === metricKey && e.date === selectedDate)
   }
 
-  async function handleCellChange(athleteId, metricKey, raw) {
-    const value = raw === '' ? null : +raw
-    await onUpsertEntry({ athleteId, metricKey, date: selectedDate, value })
-  }
-
   function handleAddDate() {
-    setSelectedDate(newDateInput || todayStr())
+    selectDate(newDateInput || todayStr())
     setNewDateInput('')
   }
 
@@ -88,8 +125,43 @@ export function TestDatabase({ athletes, allAthletes, metrics, entries, onUpsert
     await onDeactivateMetric(metric.id)
   }
 
+  async function handleSave() {
+    setSaving(true)
+    setNotice('')
+    try {
+      const updates = []
+      displayAthletes.forEach((a) => {
+        activeMetrics.forEach((m) => {
+          const input = cellRefs.current.get(cellKey(a.id, m.key))
+          if (!input) return
+          const raw = input.value
+          const existing = entryFor(a.id, m.key)
+          const newValue = raw === '' ? null : +raw
+          const oldValue = existing?.value ?? null
+          if (newValue !== oldValue) updates.push({ athleteId: a.id, metricKey: m.key, date: selectedDate, value: newValue })
+        })
+      })
+      if (updates.length) await Promise.all(updates.map(onUpsertEntry))
+      setTestGroupIds([])
+      setFlyLive({})
+      setJustSaved(true)
+      setNotice(updates.length ? `Saved ${updates.length} value${updates.length !== 1 ? 's' : ''}.` : 'Nothing to save.')
+    } catch (err) {
+      setNotice('Error: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleCancel() {
+    setTestGroupIds([])
+    setFlyLive({})
+    setJustSaved(true)
+    setNotice('')
+  }
+
   function handleExport() {
-    const byAthlete = new Map(displayAthletes.map((a) => [a.id, a]))
+    const byAthlete = new Map(groupSearchPool.map((a) => [a.id, a]))
 
     // Group entries by athlete+date so each CSV row carries every metric's
     // value together, matching the old app's one-row-per-athlete-per-date export.
@@ -137,16 +209,18 @@ export function TestDatabase({ athletes, allAthletes, metrics, entries, onUpsert
   return (
     <div>
       <h2>Test Database</h2>
-      <p className="sub">Pick a test date and log values. Flying 10 auto-converts to MPH. Tap a cell to edit.</p>
+      <p className="sub">
+        Pick a sport/sex group above, search specific athletes below, or choose a past test date to review it.
+        Nothing shows until you do. Enter values, then Save.
+      </p>
 
       <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 16 }}>
         <label className="field" style={{ marginBottom: 0 }}>
           <span className="lab">Test date</span>
-          <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}>
-            {dateOptions.length === 0 && <option value="">— none —</option>}
+          <select value={selectedDate} onChange={(e) => selectDate(e.target.value)}>
             {dateOptions.map((d) => (
               <option key={d} value={d}>
-                {d}
+                {d}{knownDates.includes(d) ? ' (has data)' : ''}
               </option>
             ))}
           </select>
@@ -194,9 +268,6 @@ export function TestDatabase({ athletes, allAthletes, metrics, entries, onUpsert
                 </span>
               )
             })}
-            <button className="btn ghost btn-small" type="button" onClick={() => setTestGroupIds([])}>
-              Show all athletes
-            </button>
           </div>
         )}
       </div>
@@ -219,58 +290,106 @@ export function TestDatabase({ athletes, allAthletes, metrics, entries, onUpsert
       </form>
       <p className="sub">Tap the ✕ on any column to stop tracking that test.</p>
 
+      {notice && <p className="sub">{notice}</p>}
+
       {displayAthletes.length === 0 ? (
-        <p className="sub">{testGroupIds.length ? 'No matching athletes for this test group.' : 'Add athletes on the Roster tab first.'}</p>
-      ) : !selectedDate ? (
-        <p className="sub">Add a test date to start logging.</p>
+        <p className="sub">No athletes selected — pick a sport/sex filter above, search specific athletes above, or choose a past test date to review it.</p>
       ) : (
-        <div className="panel" style={{ overflowX: 'auto' }}>
-        <table className="table-compact">
-          <thead>
-            <tr>
-              <th>Athlete</th>
-              {activeMetrics.map((m) => (
-                <th key={m.key}>
-                  {m.label}
-                  {m.unit ? ` (${m.unit})` : ''}{' '}
-                  <span role="button" style={{ cursor: 'pointer' }} title="Stop tracking this test" onClick={() => handleStopTracking(m)}>
-                    ✕
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {displayAthletes.map((a) => (
-              <tr key={a.id}>
-                <td>{a.name}</td>
-                {activeMetrics.map((m) => {
-                  const entry = entryFor(a.id, m.key)
-                  const raw = entry?.value ?? ''
-                  const mph = m.key === 'fly' ? flyMPH(entry?.value) : null
-                  return (
-                    <td key={m.key}>
-                      <input
-                        // Uncontrolled + keyed on the date: forces a remount
-                        // (and a fresh defaultValue) whenever selectedDate
-                        // changes, so switching dates doesn't leave stale
-                        // values from the previous date sitting in the boxes.
-                        key={selectedDate}
-                        type="number"
-                        step="any"
-                        defaultValue={raw}
-                        placeholder="—"
-                        onBlur={(e) => handleCellChange(a.id, m.key, e.target.value)}
-                      />
-                      {mph != null && <span className="sub"> {mph.toFixed(2)} mph</span>}
-                    </td>
-                  )
-                })}
+        <>
+          {isReviewingHistory && <p className="sub">Reviewing {selectedDate} — editing here updates that day's saved values.</p>}
+          <div className="panel" style={{ overflowX: 'auto' }}>
+          <table className="table-compact">
+            <thead>
+              <tr>
+                <th>Athlete</th>
+                {activeMetrics.map((m) => (
+                  <th key={m.key}>
+                    {m.label}
+                    {m.unit ? ` (${m.unit})` : ''}{' '}
+                    <span role="button" style={{ cursor: 'pointer' }} title="Stop tracking this test" onClick={() => handleStopTracking(m)}>
+                      ✕
+                    </span>
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
+            </thead>
+            <tbody>
+              {displayAthletes.map((a, rowIndex) => (
+                <tr key={a.id}>
+                  <td>{a.name}</td>
+                  {activeMetrics.map((m, colIndex) => {
+                    const entry = entryFor(a.id, m.key)
+                    const raw = entry?.value ?? ''
+                    const mph = m.key === 'fly' ? flyMPH(flyLive[a.id] !== undefined ? flyLive[a.id] : entry?.value) : null
+                    return (
+                      <td key={m.key}>
+                        <input
+                          // Uncontrolled + keyed on the date/athlete-set: forces
+                          // a remount (and a fresh defaultValue) whenever the
+                          // session changes, so switching dates/groups doesn't
+                          // leave stale unsaved values sitting in the boxes.
+                          // Nothing persists until Save reads these via ref.
+                          key={selectedDate + '|' + displayAthletes.length}
+                          ref={(el) => {
+                            if (el) cellRefs.current.set(cellKey(a.id, m.key), el)
+                            else cellRefs.current.delete(cellKey(a.id, m.key))
+                          }}
+                          type="number"
+                          step="any"
+                          defaultValue={raw}
+                          placeholder="—"
+                          onChange={m.key === 'fly' ? (e) => setFlyLive((cur) => ({ ...cur, [a.id]: e.target.value })) : undefined}
+                          onKeyDown={(e) => {
+                            // Spreadsheet-style arrow navigation: Up/Down
+                            // moves within this test's column (same
+                            // metric, next/prev athlete); Left/Right
+                            // moves within this athlete's row (same
+                            // athlete, next/prev test). preventDefault is
+                            // required even with step="any" — some
+                            // browsers still treat Up/Down on a number
+                            // input as an increment/decrement spinner
+                            // otherwise. Left/Right jump unconditionally
+                            // rather than only at the text-cursor's edge
+                            // (the usual spreadsheet nuance) because
+                            // number inputs don't expose selectionStart/
+                            // End consistently across browsers — the
+                            // tradeoff is you can't arrow sideways to
+                            // edit mid-value, only retype or click in.
+                            const isVertical = e.key === 'ArrowDown' || e.key === 'ArrowUp'
+                            const isHorizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight'
+                            if (!isVertical && !isHorizontal) return
+                            e.preventDefault()
+                            let targetInput
+                            if (isVertical) {
+                              const targetAthlete = displayAthletes[rowIndex + (e.key === 'ArrowDown' ? 1 : -1)]
+                              if (!targetAthlete) return
+                              targetInput = cellRefs.current.get(cellKey(targetAthlete.id, m.key))
+                            } else {
+                              const targetMetric = activeMetrics[colIndex + (e.key === 'ArrowRight' ? 1 : -1)]
+                              if (!targetMetric) return
+                              targetInput = cellRefs.current.get(cellKey(a.id, targetMetric.key))
+                            }
+                            if (targetInput) { targetInput.focus(); targetInput.select() }
+                          }}
+                        />
+                        {mph != null && <span className="sub"> {mph.toFixed(2)} mph</span>}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button className="btn primary" type="button" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button className="btn ghost" type="button" onClick={handleCancel} disabled={saving}>
+              Cancel
+            </button>
+          </div>
+        </>
       )}
     </div>
   )
