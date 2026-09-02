@@ -405,6 +405,21 @@ th {
 .table-compact .btn {
   padding: 6px 12px;
 }
+/* Freeze the name column (Attendance's Team, Test Database's Athlete)
+   so it stays visible while scrolling right through date/test columns
+   — covers both th:first-child (Test Database's header row, and every
+   row in Attendance, which uses <th> for its name cell throughout) and
+   td:first-child (Test Database's body rows). Needs its own opaque
+   background, not the .panel wrapper's, or cells scrolling underneath
+   would show through; the border marks the frozen edge. */
+.table-compact th:first-child,
+.table-compact td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel);
+  border-right: 1.5px solid var(--border-visible);
+}
 
 /* Below ~700px, forcing 38 columns into the viewport makes every cell
    illegible (single-digit-wide, numbers unreadable) — worse than
