@@ -4,6 +4,8 @@
 // track.floor blob to operate on an athlete's fetched session history
 // + the currently-open program, but every formula/constant is unchanged.
 import { buildCalMap } from '../build-program/calendar'
+import { wkValue } from '../build-program/engine/workload'
+import { isBarbellMovement, roundPlate } from './floorEngine'
 
 const PROG_RATE = 0.02
 const AC_LO = 1.05
@@ -41,15 +43,22 @@ export function athleteWeekTotals(history, program, exceptDate) {
   return out
 }
 
-// Weekly workload target: week 1 is the flat calibration week at the
-// assessed level; week 2+ progresses ~2%/week off the prior week,
-// clamped to stay within 1.05-1.20x the trailing 4-week average
-// (treating an unlogged week as zero, so a layoff drags the target
-// down for a safe deload). The 4 weeks "before" the program are
-// implicitly seeded at the assessed level via wkTotal(w<=0).
-export function weekTargetTotal(psc, weekTotals, week, D) {
-  const seedWeekly = psc * D
+// Weekly workload target. The Assessment's PSC IS the whole week's
+// cumulative workload — Garrett's call, which deliberately replaces the
+// reference's per-day reading (`psc * D`): a 4-day program splits one
+// PSC across its four days (see dayShares), it doesn't get four of them.
+// Until the athlete has real logged data from an earlier week, every
+// week holds at exactly that number — no progression is made up out of
+// nothing. Once an earlier week has data: week 2+ progresses ~2%/week
+// off the prior week, clamped to stay within 1.05-1.20x the trailing
+// 4-week average (treating an unlogged week as zero, so a layoff drags
+// the target down for a safe deload). The 4 weeks "before" the program
+// are implicitly seeded at the assessed level via wkTotal(w<=0).
+export function weekTargetTotal(psc, weekTotals, week) {
+  const seedWeekly = psc
   if (week <= 1) return seedWeekly
+  const hasEarlierData = Object.keys(weekTotals).some((w) => +w < week && weekTotals[w] > 0)
+  if (!hasEarlierData) return seedWeekly
   const wkTotal = (w) => {
     if (w <= 0) return seedWeekly
     if (weekTotals[w] != null) return weekTotals[w]
@@ -65,7 +74,7 @@ export function weekTargetTotal(psc, weekTotals, week, D) {
 
 // Per-session PSC = the week's target split across days by the H/M/L wave.
 export function progressedPSC(psc, weekTotals, week, dayIndex, D) {
-  const T = weekTargetTotal(psc, weekTotals, week, D)
+  const T = weekTargetTotal(psc, weekTotals, week)
   const shares = dayShares(D)
   const i = dayIndex == null || dayIndex < 0 ? 0 : Math.min(dayIndex, shares.length - 1)
   return Math.round(T * shares[i] * 100) / 100
@@ -114,4 +123,44 @@ export function priorWeekWeights(exerciseHistory, program, beforeWeek) {
     lookup[exercise] = weeks[latestWeek].weight
   })
   return lookup
+}
+
+// "Light recommendation" for an exercise with no assessment number and no
+// history to scale off of: a flat, conservative starting point — empty bar
+// for a barbell movement, nothing (coach sets it by feel on set 1)
+// otherwise. NOT solved from a share of the day's PSC target — tried that
+// first and it produced a 395 lb "light" cable row next to a 150 lb back
+// squat, because EXDB coefficients differ by orders of magnitude across
+// exercise types, so inverting a shared target value into a weight blows
+// up for anything that isn't a big compound lift.
+const EMPTY_BAR_WEIGHT = 45
+
+// Decides which weight boxes the auto-fill may write, and what goes in.
+// Only ever touches a blank box, and skips a whole exercise if any of its
+// sets already has a weight — so anything the coach typed is never
+// overwritten, which is what makes it safe to run on a day that was opened
+// (and maybe partly logged) before the Assessment existed. Per blank
+// exercise, in order of preference:
+//   1. the athlete's own most recent prior-week weight for it (uncapped —
+//      a coach's manual bump above the assessed number stays the basis),
+//   2. a one-time MAIN_LIFT_FIRST_PCT calibration off its assessed weight
+//      (a saved weight of 0 is "nothing entered", not a real assessment),
+//   3. an empty bar if it's a barbell movement,
+//   4. otherwise left blank.
+// `rows` are floor_logs rows; returns [{ id, weight, value }].
+export function planAutoFill({ rows, assessedWeights, priorWeights, ft, inch }) {
+  const alreadyWeighted = new Set(rows.filter((r) => r.weight != null).map((r) => r.exercise_index))
+  const updates = []
+  rows.forEach((row) => {
+    if (row.weight != null || alreadyWeighted.has(row.exercise_index)) return
+    const prior = priorWeights[row.exercise]
+    const b = assessedWeights?.[row.exercise]
+    let w
+    if (prior != null) w = prior
+    else if (b != null && b > 0) w = roundPlate(b * MAIN_LIFT_FIRST_PCT, row.exercise)
+    else if (isBarbellMovement(row.exercise)) w = EMPTY_BAR_WEIGHT
+    else return
+    updates.push({ id: row.id, weight: w, value: wkValue(row.exercise, ft, inch, row.set_index + 1, w, row.reps, row.tempo ?? null) })
+  })
+  return updates
 }

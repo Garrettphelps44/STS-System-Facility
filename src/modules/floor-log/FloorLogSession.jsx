@@ -1,19 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as api from './floorLogApi'
 import * as assessmentApi from '../assessment/assessmentApi'
-import { isBarbellMovement, resolveDaySession, roundPlate } from './floorEngine'
-import { athleteWeekTotals, progressedPSC, MAIN_LIFT_FIRST_PCT, priorWeekWeights } from './progression'
+import { resolveDaySession } from './floorEngine'
+import { athleteWeekTotals, planAutoFill, priorWeekWeights, progressedPSC } from './progression'
 import { EXDB, EXNAMES, wkValue } from '../build-program/engine/workload'
-
-// "Light recommendation" for an exercise with no assessment number to
-// scale off of: a flat, conservative starting point — empty bar for a
-// barbell movement, nothing (coach sets it by feel on set 1) otherwise.
-// NOT solved from a share of the day's PSC target — tried that first and
-// it produced a 395 lb "light" cable row and floor press next to a 150
-// lb back squat, because EXDB coefficients differ by orders of magnitude
-// across exercise types, so inverting a shared target value into a
-// weight blows up for anything that isn't a big compound lift.
-const EMPTY_BAR_WEIGHT = 45
 
 function groupLogs(rows) {
   const map = new Map()
@@ -61,13 +51,13 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
         rows = await api.seedExercises(facilityId, sess.id, athlete.id, day.prescribed)
       }
 
-      // Assessment auto-fill — runs once, at first view of a session,
-      // same trigger point as the reference's maybeApplyAssessment but
-      // without needing its "assessApplied" flag: a session's rows only
-      // get seeded once, so isFreshSession is naturally false forever
-      // after (the sess.projected==null check covers the off-day case,
-      // where nothing gets seeded and rows.length would otherwise stay
-      // 0 on every reload).
+      // Assessment auto-fill — runs on any load of a session that still
+      // has no PSC (sess.projected is the "auto-fill has happened"
+      // marker), not just the first. That's what lets a day that was
+      // opened BEFORE the athlete's Assessment existed pick up its PSC
+      // and weights the next time it's opened; once projected is set it
+      // never runs again, so it can't fight the coach's edits. Even
+      // while it runs, planAutoFill only writes blank weight boxes.
       // This whole block is an optional assist on top of a session that
       // already works without it (that's exactly how Floor Log shipped
       // before Assessment existed) — a failure here (Assessment not set
@@ -75,15 +65,21 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
       // must never block the coach from logging the session itself, so
       // it's isolated in its own try/catch rather than the outer one.
       let projectedValue = sess.projected
-      if (isFreshSession && sess.projected == null && athlete.height_feet != null) {
+      if (sess.projected == null && athlete.height_feet != null) {
         try {
           const assessment = await assessmentApi.fetchAssessment(facilityId, athlete.id)
           if (assessment?.psc != null) {
-            let psc = assessment.psc
+            let psc
             if (!day.offday) {
               const history = await api.fetchAthleteHistory(facilityId, athlete.id)
               const weekTotals = athleteWeekTotals(history, program, date)
               psc = progressedPSC(assessment.psc, weekTotals, day.week, day.dayIndex, day.trainingDays || 1)
+            } else {
+              // Off-day (not a program day): the Assessment PSC is a whole
+              // week's workload now, so an extra one-off day gets an
+              // average training day's share of it — not the full week.
+              const trainingDays = Object.values((program?.constraints || {}).days || {}).filter(Boolean).length || 1
+              psc = Math.round((assessment.psc / trainingDays) * 100) / 100
             }
             projectedValue = psc
             await api.updateSession(sess.id, { projected: psc })
@@ -105,32 +101,7 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
                 ? priorWeekWeights(await api.fetchAthleteExerciseHistory(facilityId, athlete.id), program, week)
                 : {}
 
-              const updates = [] // { id, weight, value }
-              rows.forEach((row) => {
-                const prior = priorWeights[row.exercise]
-                const b = assessment.weights?.[row.exercise]
-                let w
-                if (prior != null) {
-                  // Carry forward last week's real number, uncapped —
-                  // a coach's manual bump above the assessed weight
-                  // stays the new basis, since the athlete getting
-                  // stronger will eventually need more than 100% of an
-                  // assessment that's weeks old.
-                  w = prior
-                } else if (b != null) {
-                  // First time this assessed movement has ever been
-                  // logged: a one-time 80-85% calibration point.
-                  w = roundPlate(b * MAIN_LIFT_FIRST_PCT, row.exercise)
-                } else if (isBarbellMovement(row.exercise)) {
-                  // No prior data, no assessment: empty bar, nothing
-                  // fancier — the coach sets the real number by feel.
-                  w = EMPTY_BAR_WEIGHT
-                } else {
-                  return // leave blank
-                }
-                const v = wkValue(row.exercise, ft, inch, 1, w, row.reps, null)
-                updates.push({ id: row.id, weight: w, value: v })
-              })
+              const updates = planAutoFill({ rows, assessedWeights: assessment.weights, priorWeights, ft, inch })
 
               if (updates.length) {
                 await Promise.all(updates.map((u) => api.updateSet(u.id, { weight: u.weight, value: u.value })))
