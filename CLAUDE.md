@@ -21,7 +21,9 @@ Rebuild of a single-file HTML facility-management app into React + Vite + Supaba
 
 **Tables (16), all facility-scoped:** `facilities`, `facility_members`, `athletes`, `teams`, `team_members`, `programs`, `program_weeks`, `floor_sessions`, `floor_logs`, `attendance`, `metrics`, `test_entries`, `assessments`, `report_shares`, `invites`, `facility_branding`. `facility_branding` (Phase 5.5) is the newest — one row per facility, seeded automatically by `create_facility()` and backfilled for every pre-existing facility.
 
-**Migrations run 0001 → 0008 in order**, pasted by hand into the Supabase SQL Editor — **no local psql/Supabase CLI in this environment.** `0008_facility_branding.sql` also redefines `create_facility()` and `get_shared_report()` in place (full function body, not `ALTER`) rather than adding new functions, since a function body can't be partially patched.
+**Migrations run 0001 → 0009 in order**, pasted by hand into the Supabase SQL Editor — **no local psql/Supabase CLI in this environment.** `0008_facility_branding.sql` also redefines `create_facility()` and `get_shared_report()` in place (full function body, not `ALTER`) rather than adding new functions, since a function body can't be partially patched.
+
+**Attendance is per team (0009).** A mark is one row per athlete + team + date (`attendance.team_id`, unique on `(athlete_id, team_id, date)`), so an athlete on two teams has independent marks on each. Deleting a team keeps its marks — a `BEFORE DELETE` trigger on `teams` sets their `team_id` to null (they stop showing in any team grid but still count toward the athlete's Report, which counts every mark as its own session). Migration 0009 copied every pre-existing mark onto each team its athlete was on. Every attendance read/write in `src/modules/attendance/` is team-scoped (`forTeam()` in `attendanceStats.js`; API calls take a `teamId`). **0009 must be applied before this app version is deployed** — the new code writes `team_id`, which the old schema doesn't have.
 
 ## Theme
 

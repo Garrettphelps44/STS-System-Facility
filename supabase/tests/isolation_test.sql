@@ -152,6 +152,14 @@ values
   ('a3333333-0000-0000-0000-000000000001', 'a2222222-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
   ('b3333333-0000-0000-0000-000000000001', 'b1111111-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
 
+-- Added with 0009 (attendance per team): a second facility-A team with
+-- athlete A1 on BOTH teams, so per-team attendance marks can be tested.
+-- (This file needs 0009_attendance_per_team.sql applied first.)
+insert into public.teams (id, facility_id, name)
+values ('a3444444-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Team A2');
+insert into public.team_members (team_id, athlete_id, facility_id)
+values ('a3444444-0000-0000-0000-000000000002', 'a1111111-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+
 insert into public.report_shares (id, facility_id, athlete_id)
 values
   ('a6111111-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001'),
@@ -543,6 +551,73 @@ begin;
     count(*) = 0,
     'got ' || count(*) || ' row(s)'
   from public.assessments where athlete_id = 'a2222222-0000-0000-0000-000000000002';
+commit;
+
+-- 3y. Added with 0009: the same athlete on two teams keeps two separate
+--     attendance marks for the same date (the bug this migration fixes).
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  do $$
+  declare n int;
+  begin
+    begin
+      insert into public.attendance (facility_id, athlete_id, team_id, date, status)
+      values
+        ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001', 'a3333333-0000-0000-0000-000000000001', current_date + 3, 'present'),
+        ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001', 'a3444444-0000-0000-0000-000000000002', current_date + 3, 'absent');
+      select count(*) into n from public.attendance
+        where athlete_id = 'a1111111-0000-0000-0000-000000000001' and date = current_date + 3;
+      insert into _test_results (check_name, passed, detail)
+      values ('same athlete + same date on two teams keeps two separate marks', n = 2, 'got ' || n || ' row(s)');
+    exception when others then
+      insert into _test_results (check_name, passed, detail)
+      values ('same athlete + same date on two teams keeps two separate marks', false, 'insert failed: ' || sqlerrm);
+    end;
+  end $$;
+commit;
+
+-- 3z. Added with 0009: an attendance mark can't claim facility A while
+--     pointing at facility B's team (composite foreign key).
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  do $$
+  begin
+    begin
+      insert into public.attendance (facility_id, athlete_id, team_id, date, status)
+      values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'a1111111-0000-0000-0000-000000000001', 'b3333333-0000-0000-0000-000000000001', current_date + 4, 'present');
+      insert into _test_results (check_name, passed, detail)
+      values ('owner A cannot attach a facility A mark to facility B''s team', false, 'insert succeeded — the foreign key did not block it');
+    exception when others then
+      insert into _test_results (check_name, passed, detail)
+      values ('owner A cannot attach a facility A mark to facility B''s team', true, 'insert correctly rejected: ' || sqlerrm);
+    end;
+  end $$;
+commit;
+
+-- 3aa. Added with 0009: deleting a team keeps its attendance marks
+--      (detached, team_id -> null) instead of deleting or blocking.
+--      Uses the two marks 3y created on date current_date + 3.
+begin;
+  set local role authenticated;
+  select set_config('request.jwt.claims', json_build_object('sub', '11111111-1111-1111-1111-111111111111', 'role', 'authenticated')::text, true);
+  do $$
+  declare total int; detached int;
+  begin
+    begin
+      delete from public.teams where id = 'a3444444-0000-0000-0000-000000000002';
+      select count(*) into total from public.attendance
+        where athlete_id = 'a1111111-0000-0000-0000-000000000001' and date = current_date + 3;
+      select count(*) into detached from public.attendance
+        where athlete_id = 'a1111111-0000-0000-0000-000000000001' and date = current_date + 3 and team_id is null;
+      insert into _test_results (check_name, passed, detail)
+      values ('deleting a team keeps its attendance marks (detached)', total = 2 and detached = 1, total || ' mark(s) remain, ' || detached || ' detached');
+    exception when others then
+      insert into _test_results (check_name, passed, detail)
+      values ('deleting a team keeps its attendance marks (detached)', false, 'delete failed: ' || sqlerrm);
+    end;
+  end $$;
 commit;
 
 -- ---------------------------------------------------------------------

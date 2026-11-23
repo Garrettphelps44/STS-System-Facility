@@ -4,7 +4,7 @@ import * as trackerApi from '../tracker/trackerApi'
 import * as api from './attendanceApi'
 import {
   buildColumns, dateTotal, dispDate, distinctDates, findAthleteByName,
-  formatWeekRange, initialExpandedWeek, monthName, presentCount, weekDateTotal, weekKey, weekTeamSum,
+  forTeam, formatWeekRange, initialExpandedWeek, monthName, presentCount, weekDateTotal, weekKey, weekTeamSum,
 } from './attendanceStats'
 import { RollCallModal } from './RollCallModal'
 import { ReportModal } from './ReportModal'
@@ -64,40 +64,42 @@ export function AttendanceModule() {
 
   // ---------- status mutations (optimistic — a coach is standing there waiting) ----------
 
-  function applyLocalStatus(athleteId, date, status) {
+  // A mark belongs to one team, so an athlete on two teams has separate
+  // marks per team for the same day — every status write carries the team.
+  function applyLocalStatus(teamId, athleteId, date, status) {
     setRecords((cur) => {
-      const rest = cur.filter((r) => !(r.athlete_id === athleteId && r.date === date))
-      return status ? [...rest, { athlete_id: athleteId, date, status }] : rest
+      const rest = cur.filter((r) => !(r.team_id === teamId && r.athlete_id === athleteId && r.date === date))
+      return status ? [...rest, { athlete_id: athleteId, team_id: teamId, date, status }] : rest
     })
   }
 
-  async function handleSetStatus(athleteId, date, status) {
-    applyLocalStatus(athleteId, date, status)
+  async function handleSetStatus(teamId, athleteId, date, status) {
+    applyLocalStatus(teamId, athleteId, date, status)
     try {
-      await api.setStatus(facilityId, athleteId, date, status)
+      await api.setStatus(facilityId, teamId, athleteId, date, status)
     } catch (err) {
       setError(err.message)
       refreshRecords()
     }
   }
 
-  async function handleBulkSetStatus(athleteIds, date, status) {
+  async function handleBulkSetStatus(teamId, athleteIds, date, status) {
     setRecords((cur) => {
-      const rest = cur.filter((r) => !(r.date === date && athleteIds.includes(r.athlete_id)))
-      return [...rest, ...athleteIds.map((athlete_id) => ({ athlete_id, date, status }))]
+      const rest = cur.filter((r) => !(r.team_id === teamId && r.date === date && athleteIds.includes(r.athlete_id)))
+      return [...rest, ...athleteIds.map((athlete_id) => ({ athlete_id, team_id: teamId, date, status }))]
     })
     try {
-      await api.bulkSetStatus(facilityId, athleteIds, date, status)
+      await api.bulkSetStatus(facilityId, teamId, athleteIds, date, status)
     } catch (err) {
       setError(err.message)
       refreshRecords()
     }
   }
 
-  async function handleClearCell(athleteIds, date) {
-    setRecords((cur) => cur.filter((r) => !(r.date === date && athleteIds.includes(r.athlete_id))))
+  async function handleClearCell(teamId, athleteIds, date) {
+    setRecords((cur) => cur.filter((r) => !(r.team_id === teamId && r.date === date && athleteIds.includes(r.athlete_id))))
     try {
-      await api.clearCell(athleteIds, date)
+      await api.clearCell(teamId, athleteIds, date)
     } catch (err) {
       setError(err.message)
       refreshRecords()
@@ -138,11 +140,24 @@ export function AttendanceModule() {
     }
   }
 
-  async function handleAddPlayers(team, names) {
+  // `height` ({ heightFeet, heightInches } or null) is only ever passed for a
+  // single player. A brand-new athlete is created with it; a name matching an
+  // existing roster athlete gets their roster height updated instead — but
+  // only if something was actually entered, so leaving the boxes blank never
+  // wipes a height that's already saved.
+  async function handleAddPlayers(team, names, height) {
     for (const name of names) {
       let a = findAthleteByName(athletes, name)
-      if (!a) a = await trackerApi.addAthlete(facilityId, { name })
-      await api.addTeamMember(facilityId, team.id, a.id)
+      if (!a) {
+        a = await trackerApi.addAthlete(facilityId, { name, heightFeet: height?.heightFeet, heightInches: height?.heightInches })
+        await api.addTeamMember(facilityId, team.id, a.id)
+      } else {
+        await api.addTeamMember(facilityId, team.id, a.id)
+        const entered = height && (height.heightFeet != null || height.heightInches != null)
+        if (entered && (a.height_feet !== height.heightFeet || a.height_inches !== height.heightInches)) {
+          await trackerApi.updateAthlete(a.id, { height_feet: height.heightFeet, height_inches: height.heightInches })
+        }
+      }
     }
     await Promise.all([refreshAthletes(), refreshTeams()])
   }
@@ -236,7 +251,9 @@ export function AttendanceModule() {
               </tr>
             </thead>
             <tbody>
-              {teams.map((team) => (
+              {teams.map((team) => {
+                const teamRecords = forTeam(records, team.id)
+                return (
                 <tr key={team.id}>
                   <th>
                     <button className="btn ghost" type="button" onClick={() => handleRenameTeam(team)}>{team.name}</button>
@@ -245,7 +262,7 @@ export function AttendanceModule() {
                   </th>
                   {cols.map((c) => {
                     if (c.type === 'date') {
-                      const cnt = presentCount(records, team.members, c.date)
+                      const cnt = presentCount(teamRecords, team.members, c.date)
                       return (
                         <td key={c.date}>
                           <button className="btn" type="button" onClick={() => setRollCall({ teamId: team.id, date: c.date })}>
@@ -254,7 +271,7 @@ export function AttendanceModule() {
                         </td>
                       )
                     }
-                    const ws = weekTeamSum(records, team.members, c.dates)
+                    const ws = weekTeamSum(teamRecords, team.members, c.dates)
                     return (
                       <td key={c.weekKey}>
                         <button className="btn ghost" type="button" onClick={() => expandWeek(c.weekKey)}>{ws.logged ? ws.sum : '···'}</button>
@@ -262,7 +279,8 @@ export function AttendanceModule() {
                     )
                   })}
                 </tr>
-              ))}
+                )
+              })}
               <tr>
                 <th>Total</th>
                 {cols.map((c) =>
@@ -283,18 +301,18 @@ export function AttendanceModule() {
           team={rollCallTeam}
           date={rollCall.date}
           athletes={athletes}
-          records={records}
+          records={forTeam(records, rollCallTeam.id)}
           onClose={() => setRollCall(null)}
-          onSetStatus={handleSetStatus}
-          onBulkSetStatus={handleBulkSetStatus}
-          onClearCell={handleClearCell}
-          onAddPlayers={(names) => handleAddPlayers(rollCallTeam, names)}
+          onSetStatus={(athleteId, date, status) => handleSetStatus(rollCallTeam.id, athleteId, date, status)}
+          onBulkSetStatus={(athleteIds, date, status) => handleBulkSetStatus(rollCallTeam.id, athleteIds, date, status)}
+          onClearCell={(athleteIds, date) => handleClearCell(rollCallTeam.id, athleteIds, date)}
+          onAddPlayers={(names, height) => handleAddPlayers(rollCallTeam, names, height)}
           onRemoveMember={(athleteId) => handleRemoveMember(rollCallTeam, athleteId)}
         />
       )}
 
       {reportTeam && (
-        <ReportModal team={reportTeam} athletes={athletes} records={records} onClose={() => setReportTeamId(null)} />
+        <ReportModal team={reportTeam} athletes={athletes} records={forTeam(records, reportTeam.id)} onClose={() => setReportTeamId(null)} />
       )}
     </div>
   )

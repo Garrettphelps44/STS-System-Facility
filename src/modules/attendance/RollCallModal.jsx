@@ -1,14 +1,22 @@
-import { useState } from 'react'
-import { athleteStats, dispDate, monthName } from './attendanceStats'
+import { useEffect, useState } from 'react'
+import { athleteStats, dispDate, findAthleteByName, monthName } from './attendanceStats'
 
 const STATUS_ORDER = ['present', 'late', 'absent', 'excused']
 const STATUS_LABEL = { present: 'P', late: 'L', absent: 'A', excused: 'E' }
+
+function heightLabel(a) {
+  return a.height_feet != null || a.height_inches != null
+    ? `${a.height_feet || 0}'${a.height_inches || 0}"`
+    : '—'
+}
 
 export function RollCallModal({
   team, date, athletes, records,
   onClose, onSetStatus, onBulkSetStatus, onClearCell, onAddPlayers, onRemoveMember,
 }) {
   const [newPlayer, setNewPlayer] = useState('')
+  const [feet, setFeet] = useState('')
+  const [inches, setInches] = useState('')
   const [error, setError] = useState('')
 
   const members = team.members.map((id) => athletes.find((a) => a.id === id)).filter(Boolean)
@@ -18,13 +26,34 @@ export function RollCallModal({
 
   const nonMembers = athletes.filter((a) => !team.members.includes(a.id))
 
+  // Height only makes sense for one player at a time — a pasted list of
+  // several names has no way to say whose height is whose, so the height
+  // boxes switch off and those players are added with no height.
+  const names = newPlayer.split(',').map((s) => s.trim()).filter(Boolean)
+  const multi = names.length > 1
+
+  // Typing a name that already exists on the roster pulls their saved
+  // height into the boxes (and clears them again when the match goes
+  // away), so what's on screen is what will be written to the roster.
+  const matched = names.length === 1 ? findAthleteByName(athletes, names[0]) : null
+  const matchedId = matched?.id ?? null
+  useEffect(() => {
+    setFeet(matched?.height_feet ?? '')
+    setInches(matched?.height_inches ?? '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-sync when the matched athlete changes, not on every keystroke
+  }, [matchedId])
+
   async function handleAddPlayers() {
-    const names = newPlayer.split(',').map((s) => s.trim()).filter(Boolean)
     if (!names.length) return
     setError('')
     try {
-      await onAddPlayers(names)
+      const height = names.length === 1
+        ? { heightFeet: feet === '' ? null : +feet, heightInches: inches === '' ? null : +inches }
+        : null
+      await onAddPlayers(names, height)
       setNewPlayer('')
+      setFeet('')
+      setInches('')
     } catch (err) {
       setError(err.message)
     }
@@ -55,6 +84,7 @@ export function RollCallModal({
                   <div>{a.name}</div>
                   <div className="sub" style={{ fontSize: 12 }}>{stat}</div>
                 </div>
+                <span className="sub" title="Height (from Roster)" style={{ minWidth: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{heightLabel(a)}</span>
                 <span style={{ display: 'flex', gap: 4 }}>
                   {STATUS_ORDER.map((st) => (
                     <button
@@ -77,9 +107,9 @@ export function RollCallModal({
           })}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
           <input
-            style={{ flex: 1 }}
+            style={{ flex: '1 1 200px' }}
             list="attendance-athlete-list"
             placeholder="Add player (or paste comma-separated names)"
             value={newPlayer}
@@ -89,8 +119,35 @@ export function RollCallModal({
           <datalist id="attendance-athlete-list">
             {nonMembers.map((a) => <option key={a.id} value={a.name} />)}
           </datalist>
+          <input
+            type="number"
+            min="0"
+            max="8"
+            placeholder="ft"
+            aria-label="Height feet"
+            style={{ width: 64 }}
+            disabled={multi}
+            value={feet}
+            onChange={(e) => setFeet(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddPlayers() }}
+          />
+          <input
+            type="number"
+            min="0"
+            max="11"
+            placeholder="in"
+            aria-label="Height inches"
+            style={{ width: 64 }}
+            disabled={multi}
+            value={inches}
+            onChange={(e) => setInches(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddPlayers() }}
+          />
           <button className="btn ghost" type="button" onClick={handleAddPlayers}>Add</button>
         </div>
+        <p className="sub" style={{ fontSize: 12, margin: '6px 0 0' }}>
+          {multi ? 'Height is for one player at a time — add them individually to set heights.' : 'Height saves to the Roster.'}
+        </p>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn ghost" type="button" onClick={() => onClearCell(members.map((m) => m.id), date)}>Clear this cell</button>

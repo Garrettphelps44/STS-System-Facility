@@ -15,6 +15,13 @@ export function findAthleteByName(athletes, name) {
   return athletes.find((a) => normalizeName(a.name) === n) || null
 }
 
+// Attendance marks belong to a team (an athlete on two teams has separate
+// marks for each), so every per-team number below is computed from
+// forTeam(records, team.id), never from the facility-wide list.
+export function forTeam(records, teamId) {
+  return records.filter((r) => r.team_id === teamId)
+}
+
 // Every attendance row IS a logged status (the check constraint only
 // allows the four real values), so "sessions" is just the row count for
 // that athlete — no separate empty-string bookkeeping needed like the
@@ -43,7 +50,7 @@ export function dateTotal(records, teams, date) {
   let sum = 0
   let any = false
   teams.forEach((t) => {
-    const c = presentCount(records, t.members, date)
+    const c = presentCount(forTeam(records, t.id), t.members, date)
     if (c !== null) { sum += c; any = true }
   })
   return any ? sum : null
