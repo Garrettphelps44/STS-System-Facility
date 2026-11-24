@@ -12,12 +12,20 @@ function heightLabel(a) {
 
 export function RollCallModal({
   team, date, athletes, records,
-  onClose, onSetStatus, onBulkSetStatus, onClearCell, onAddPlayers, onRemoveMember,
+  onClose, onSetStatus, onBulkSetStatus, onClearCell, onAddPlayers, onRemoveMember, onUpdateHeight,
 }) {
   const [newPlayer, setNewPlayer] = useState('')
   const [feet, setFeet] = useState('')
   const [inches, setInches] = useState('')
   const [error, setError] = useState('')
+
+  // Inline height editor for a player already on the team: tap their
+  // height, edit under their name, Save writes straight to the Roster.
+  // One row at a time; blank boxes clear the height (unlike the Add row,
+  // where blank never erases — here emptying it is a deliberate edit).
+  const [editingId, setEditingId] = useState(null)
+  const [editFeet, setEditFeet] = useState('')
+  const [editInches, setEditInches] = useState('')
 
   const members = team.members.map((id) => athletes.find((a) => a.id === id)).filter(Boolean)
   const statusOf = (aid) => records.find((r) => r.athlete_id === aid && r.date === date)?.status || ''
@@ -42,6 +50,28 @@ export function RollCallModal({
     setInches(matched?.height_inches ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-sync when the matched athlete changes, not on every keystroke
   }, [matchedId])
+
+  function startHeightEdit(a) {
+    setEditingId(a.id)
+    setEditFeet(a.height_feet ?? '')
+    setEditInches(a.height_inches ?? '')
+  }
+
+  async function saveHeight(a) {
+    const heightFeet = editFeet === '' ? null : +editFeet
+    const heightInches = editInches === '' ? null : +editInches
+    if (heightFeet === (a.height_feet ?? null) && heightInches === (a.height_inches ?? null)) {
+      setEditingId(null)
+      return
+    }
+    setError('')
+    try {
+      await onUpdateHeight(a.id, { heightFeet, heightInches })
+      setEditingId(null)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   async function handleAddPlayers() {
     if (!names.length) return
@@ -83,8 +113,36 @@ export function RollCallModal({
                 <div style={{ flex: 1 }}>
                   <div>{a.name}</div>
                   <div className="sub" style={{ fontSize: 12 }}>{stat}</div>
+                  {editingId === a.id && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                      <input
+                        type="number" min="0" max="8" placeholder="ft" aria-label={`${a.name} height feet`}
+                        style={{ width: 60, padding: '6px 8px' }} autoFocus
+                        value={editFeet}
+                        onChange={(e) => setEditFeet(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveHeight(a); if (e.key === 'Escape') setEditingId(null) }}
+                      />
+                      <input
+                        type="number" min="0" max="11" placeholder="in" aria-label={`${a.name} height inches`}
+                        style={{ width: 60, padding: '6px 8px' }}
+                        value={editInches}
+                        onChange={(e) => setEditInches(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveHeight(a); if (e.key === 'Escape') setEditingId(null) }}
+                      />
+                      <button className="btn primary" style={{ padding: '6px 12px' }} type="button" onClick={() => saveHeight(a)}>Save</button>
+                      <button className="btn ghost" style={{ padding: '6px 12px' }} type="button" onClick={() => setEditingId(null)}>Cancel</button>
+                    </div>
+                  )}
                 </div>
-                <span className="sub" title="Height (from Roster)" style={{ minWidth: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{heightLabel(a)}</span>
+                <button
+                  type="button"
+                  title="Tap to edit height (saves to the Roster)"
+                  aria-label={`Edit ${a.name}'s height`}
+                  onClick={() => startHeightEdit(a)}
+                  style={{ minWidth: 44, textAlign: 'center', whiteSpace: 'nowrap', background: 'none', border: 'none', borderBottom: '1px dashed var(--muted-2)', borderRadius: 0, padding: '2px 0', color: 'var(--muted)', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
+                >
+                  {heightLabel(a)}
+                </button>
                 <span style={{ display: 'flex', gap: 4 }}>
                   {STATUS_ORDER.map((st) => (
                     <button

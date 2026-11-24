@@ -162,6 +162,13 @@ export function AttendanceModule() {
     await Promise.all([refreshAthletes(), refreshTeams()])
   }
 
+  // Edits the athlete's Roster height straight from the roll call — blank
+  // boxes (null) clear it, same as editing in Roster.
+  async function handleUpdateHeight(athleteId, { heightFeet, heightInches }) {
+    await trackerApi.updateAthlete(athleteId, { height_feet: heightFeet, height_inches: heightInches })
+    await refreshAthletes()
+  }
+
   async function handleRemoveMember(team, athleteId) {
     try {
       await api.removeTeamMember(team.id, athleteId)
@@ -308,6 +315,7 @@ export function AttendanceModule() {
           onClearCell={(athleteIds, date) => handleClearCell(rollCallTeam.id, athleteIds, date)}
           onAddPlayers={(names, height) => handleAddPlayers(rollCallTeam, names, height)}
           onRemoveMember={(athleteId) => handleRemoveMember(rollCallTeam, athleteId)}
+          onUpdateHeight={handleUpdateHeight}
         />
       )}
 
