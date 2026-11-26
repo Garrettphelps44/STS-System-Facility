@@ -33,6 +33,7 @@ export function FloorLogModule() {
   const [activeId, setActiveId] = useState(null)
   const [date, setDate] = useState('')
   const [showAddPlayer, setShowAddPlayer] = useState(false)
+  const [doneNotice, setDoneNotice] = useState('')
 
   const refreshAthletes = useCallback(async () => setAthletes(await trackerApi.fetchAthletes(facilityId)), [facilityId])
 
@@ -127,6 +128,15 @@ export function FloorLogModule() {
     }
   }
 
+  // An athlete tapped Done and their session is confirmed saved: take them
+  // off the floor so it's obvious they're finished (the next athlete on the
+  // floor, if any, comes up). Their data stays — reopen them any time.
+  function handleSessionDone(athlete) {
+    removeFromRoster(athlete.id)
+    setDoneNotice(`✓ ${athlete.name} is done — ${date} saved.`)
+    setTimeout(() => setDoneNotice((n) => (n.includes(athlete.name) ? '' : n)), 6000)
+  }
+
   if (loading) return <p className="sub">Loading Floor Log…</p>
   if (error) return <p className="error-text" role="alert">{error}</p>
 
@@ -205,6 +215,12 @@ export function FloorLogModule() {
         />
       )}
 
+      {doneNotice && (
+        <div className="panel" role="status" style={{ borderColor: 'var(--green)', color: 'var(--green)', fontWeight: 800 }}>
+          {doneNotice}
+        </div>
+      )}
+
       {!programs.length && <p className="sub">No program available. Build one in Build Program (or save one) first.</p>}
       {programs.length > 0 && !activeAthlete && <p className="sub">Add an athlete above to start logging.</p>}
       {program && activeAthlete && !date && <p className="sub">Pick a date.</p>}
@@ -215,6 +231,7 @@ export function FloorLogModule() {
           athlete={activeAthlete}
           program={program}
           date={date}
+          onDone={() => handleSessionDone(activeAthlete)}
         />
       )}
     </div>

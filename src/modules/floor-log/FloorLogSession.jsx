@@ -23,7 +23,7 @@ function groupLogs(rows) {
   return [...map.values()].sort((a, b) => a.exercise_index - b.exercise_index)
 }
 
-export function FloorLogSession({ facilityId, athlete, program, date }) {
+export function FloorLogSession({ facilityId, athlete, program, date, onDone }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sessionId, setSessionId] = useState(null)
@@ -32,7 +32,7 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
   const [ctx, setCtx] = useState(null) // { offday, week, wd, code }
   const [slots, setSlots] = useState([])
   const [search, setSearch] = useState(null) // { exerciseIndex, query } — one open dropdown at a time
-  const [savedFlash, setSavedFlash] = useState(false)
+  const [finishing, setFinishing] = useState(false)
 
   const loadSession = useCallback(async () => {
     setLoading(true)
@@ -226,9 +226,34 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
     api.updateSession(sessionId, { projected: raw === '' ? null : +raw }).catch((err) => setError(err.message))
   }
 
-  function handleDone() {
-    setSavedFlash(true)
-    setTimeout(() => setSavedFlash(false), 1400)
+  // Done: make sure what's on screen is what's saved, then hand off so the
+  // athlete is cleared from view. Every keystroke already saves, but those
+  // writes aren't awaited — so this re-writes every set's weight/reps/tempo
+  // (and the PSC), reads the session back, and only reports done if the
+  // database matches the screen exactly. Any mismatch or error keeps the
+  // athlete on screen with the error shown, so nothing is lost silently.
+  async function handleDone() {
+    setFinishing(true)
+    setError('')
+    try {
+      const sets = slots.flatMap((s) => s.sets)
+      await Promise.all([
+        ...sets.map((set) => api.updateSet(set.id, { weight: set.weight ?? null, reps: set.reps ?? null, tempo: set.tempo ?? null })),
+        api.updateSession(sessionId, { projected: projected === '' || projected == null ? null : +projected }),
+      ])
+      const saved = await api.fetchLogs(sessionId)
+      const byId = new Map(saved.map((r) => [r.id, r]))
+      const same = (a, b) => (a ?? null) === (b ?? null) || Number(a) === Number(b)
+      const mismatch = sets.find((set) => {
+        const r = byId.get(set.id)
+        return !r || !same(r.weight, set.weight) || !same(r.reps, set.reps) || (r.tempo ?? null) !== (set.tempo ?? null)
+      })
+      if (mismatch) throw new Error('Some sets did not save — check your connection and tap Done again.')
+      onDone?.()
+    } catch (err) {
+      setError(err.message)
+      setFinishing(false)
+    }
   }
 
   // Put this athlete on a different program day for this session. The
@@ -403,7 +428,7 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
 
       <button className="btn ghost" type="button" onClick={handleAddExercise}>+ Next Exercise</button>
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button className="btn primary" type="button" onClick={handleDone}>{savedFlash ? 'Saved ✓' : 'Done'}</button>
+        <button className="btn primary" type="button" onClick={handleDone} disabled={finishing}>{finishing ? 'Saving…' : 'Done'}</button>
         <button className="btn ghost" type="button" onClick={handleCancel}>Cancel</button>
       </div>
     </div>
