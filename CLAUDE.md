@@ -29,6 +29,8 @@ Rebuild of a single-file HTML facility-management app into React + Vite + Supaba
 
 **Each athlete's program (0012).** `athletes.program_id` (composite FK to `programs`; NULL = the facility default, the most recently created program). Floor Log's Program dropdown always shows the selected athlete's program and changing it assigns it to that athlete only (and reloads their open session from it) — nothing carries over between athletes. The session is only rendered once the selected athlete's own program has loaded, so it can't be seeded from a previous athlete's program. Deleting a program unassigns its athletes (BEFORE DELETE trigger). **0012 must be applied before deploying** — `fetchAthletes` selects the new column.
 
+**Floor Log stays mounted across tab switches.** `AppShell` mounts `FloorLogModule` on first visit and only hides it (`hidden`, keyed by facility) when another tab is up, so the floor, selection, date and open session survive switching tabs; its scroll position is restored on return. On coming back it quietly refetches athletes/programs/teams (not the default program — an athlete on the default isn't switched mid-session). Roster/active athlete/date are also kept in `sessionStorage` (`sts.floorLog.<facilityId>`) so a page reload restores them. Every other tab still remounts fresh on each visit.
+
 ## Theme
 
 Brand tokens and shared components (`.panel`, `.btn`, `.eyebrow`, `.brandbar`, form fields, modal overlay) live in `src/theme/tokens.css`, imported once from `src/index.css`. Nothing should hardcode a color — use an existing token or add a new one there.

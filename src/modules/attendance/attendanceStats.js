@@ -56,26 +56,6 @@ export function dateTotal(records, teams, date) {
   return any ? sum : null
 }
 
-export function weekTeamSum(records, memberIds, dates) {
-  let sum = 0
-  let logged = 0
-  dates.forEach((d) => {
-    const c = presentCount(records, memberIds, d)
-    if (c !== null) { sum += c; logged++ }
-  })
-  return { sum, logged }
-}
-
-export function weekDateTotal(records, teams, dates) {
-  let sum = 0
-  let any = false
-  dates.forEach((d) => {
-    const t = dateTotal(records, teams, d)
-    if (t !== null) { sum += t; any = true }
-  })
-  return any ? sum : null
-}
-
 export function distinctDates(records) {
   return [...new Set(records.map((r) => r.date))].sort()
 }
@@ -94,24 +74,26 @@ export function dispDate(iso) {
   return p.length === 3 ? `${+p[1]}/${+p[2]}` : iso
 }
 
-// Weeks run Sunday-start, matching the reference exactly.
-export function weekKey(iso) {
-  const dt = parseISO(iso)
-  const sun = new Date(dt)
-  sun.setHours(0, 0, 0, 0)
-  sun.setDate(dt.getDate() - dt.getDay())
-  return `${sun.getFullYear()}-${sun.getMonth() + 1}-${sun.getDate()}`
+function isoOf(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
-export function groupDatesByWeek(dates) {
-  const weeks = []
-  dates.forEach((d) => {
-    const k = weekKey(d)
-    let w = weeks.find((x) => x.key === k)
-    if (!w) { w = { key: k, dates: [] }; weeks.push(w) }
-    w.dates.push(d)
-  })
-  return weeks
+export function todayISO() {
+  return isoOf(new Date())
+}
+
+export function addDaysISO(iso, n) {
+  const dt = parseISO(iso)
+  dt.setDate(dt.getDate() + n)
+  return isoOf(dt)
+}
+
+// Weeks run Sunday–Saturday, matching the reference. Returns that week's
+// Sunday as an ISO date — the key the grid uses for "which week".
+export function weekStart(iso) {
+  const dt = parseISO(iso)
+  dt.setDate(dt.getDate() - dt.getDay())
+  return isoOf(dt)
 }
 
 export function formatWeekRange(dates) {
@@ -122,27 +104,13 @@ export function formatWeekRange(dates) {
   return sm === em ? `${sm} ${a.getDate()}–${b.getDate()}` : `${sm} ${a.getDate()} – ${em} ${b.getDate()}`
 }
 
-// Column model for the grid: an expanded week renders one column per
-// date, a collapsed week renders a single clickable summary column.
-export function buildColumns(dates, expandedWeeks) {
-  const cols = []
-  groupDatesByWeek(dates).forEach((w) => {
-    if (expandedWeeks.has(w.key)) {
-      w.dates.forEach((d, i) => cols.push({ type: 'date', date: d, weekKey: w.key, weekFirst: i === 0 }))
-    } else {
-      cols.push({ type: 'week', weekKey: w.key, dates: w.dates })
-    }
-  })
-  return cols
+export function weekLabel(startISO) {
+  return formatWeekRange([startISO, addDaysISO(startISO, 6)])
 }
 
-// Which week should start expanded: the current calendar week if it has
-// a column, otherwise the most recent week with one — matches the
-// reference's initExpandedWeeks so a coach lands on "now," not week 1.
-export function initialExpandedWeek(dates) {
-  if (!dates.length) return null
-  const now = new Date()
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const tk = weekKey(today)
-  return dates.some((d) => weekKey(d) === tk) ? tk : weekKey(dates[dates.length - 1])
+// The weeks the grid's ◀ ▶ arrows step through: every week that has at
+// least one date, plus the current week, oldest first. Empty weeks in
+// between are skipped so going back a season isn't one click per week.
+export function navigableWeeks(dates, today = todayISO()) {
+  return [...new Set([...dates.map(weekStart), weekStart(today)])].sort()
 }

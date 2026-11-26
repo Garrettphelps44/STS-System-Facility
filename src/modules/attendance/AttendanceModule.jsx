@@ -3,8 +3,8 @@ import { useAuth } from '../../auth/AuthContext'
 import * as trackerApi from '../tracker/trackerApi'
 import * as api from './attendanceApi'
 import {
-  buildColumns, dateTotal, dispDate, distinctDates, findAthleteByName,
-  forTeam, formatWeekRange, initialExpandedWeek, monthName, presentCount, weekDateTotal, weekKey, weekTeamSum,
+  addDaysISO, dateTotal, dispDate, distinctDates, findAthleteByName,
+  forTeam, monthName, navigableWeeks, presentCount, todayISO, weekLabel, weekStart,
 } from './attendanceStats'
 import { RollCallModal } from './RollCallModal'
 import { ReportModal } from './ReportModal'
@@ -17,7 +17,10 @@ export function AttendanceModule() {
   const [teams, setTeams] = useState([])
   const [records, setRecords] = useState([])
   const [openDates, setOpenDates] = useState([]) // ephemeral, session-local — see requirements: no schema home for a "known but empty" date
-  const [expandedWeeks, setExpandedWeeks] = useState(new Set())
+  // The grid shows one week at a time (Sunday's ISO date), starting on the
+  // current week. Older weeks aren't deleted or hidden from any stats —
+  // only from the grid; ◀ ▶ step back to them.
+  const [viewWeek, setViewWeek] = useState(() => weekStart(todayISO()))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [rollCall, setRollCall] = useState(null) // { teamId, date }
@@ -44,8 +47,6 @@ export function AttendanceModule() {
         setAthletes(a)
         setTeams(t)
         setRecords(r)
-        const wk = initialExpandedWeek(distinctDates(r))
-        setExpandedWeeks(wk ? new Set([wk]) : new Set())
       } catch (err) {
         if (active) setError(err.message)
       } finally {
@@ -57,10 +58,12 @@ export function AttendanceModule() {
   }, [facilityId])
 
   const dates = useMemo(() => [...new Set([...distinctDates(records), ...openDates])].sort(), [records, openDates])
-  const cols = useMemo(() => buildColumns(dates, expandedWeeks), [dates, expandedWeeks])
-
-  function expandWeek(key) { setExpandedWeeks((s) => new Set([...s, key])) }
-  function collapseWeek(key) { setExpandedWeeks((s) => { const n = new Set(s); n.delete(key); return n }) }
+  const weekEnd = addDaysISO(viewWeek, 6)
+  const cols = useMemo(() => dates.filter((d) => d >= viewWeek && d <= weekEnd), [dates, viewWeek, weekEnd])
+  const weeks = useMemo(() => navigableWeeks(dates), [dates])
+  const thisWeek = weekStart(todayISO())
+  const prevWeek = [...weeks].reverse().find((w) => w < viewWeek) || null
+  const nextWeek = weeks.find((w) => w > viewWeek) || null
 
   // ---------- status mutations (optimistic — a coach is standing there waiting) ----------
 
@@ -188,7 +191,7 @@ export function AttendanceModule() {
   function handleConfirmAddDate() {
     if (datePickerValue) {
       setOpenDates((d) => (d.includes(datePickerValue) ? d : [...d, datePickerValue]))
-      expandWeek(weekKey(datePickerValue))
+      setViewWeek(weekStart(datePickerValue))
     }
     setShowDatePicker(false)
   }
@@ -235,26 +238,32 @@ export function AttendanceModule() {
       {teams.length === 0 && <p className="sub">No teams yet — add one to start taking roll.</p>}
 
       {teams.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <button className="btn ghost" type="button" style={{ padding: '6px 12px' }} disabled={!prevWeek} onClick={() => setViewWeek(prevWeek)} aria-label="Previous week" title="Previous week with attendance">◀</button>
+          <strong style={{ minWidth: 150, textAlign: 'center' }}>Week of {weekLabel(viewWeek)}</strong>
+          <button className="btn ghost" type="button" style={{ padding: '6px 12px' }} disabled={!nextWeek} onClick={() => setViewWeek(nextWeek)} aria-label="Next week" title="Next week with attendance">▶</button>
+          {viewWeek === thisWeek
+            ? <span className="sub" style={{ margin: 0 }}>This week</span>
+            : <button className="btn ghost" type="button" style={{ padding: '6px 12px' }} onClick={() => setViewWeek(thisWeek)}>This week</button>}
+        </div>
+      )}
+
+      {teams.length > 0 && cols.length === 0 && (
+        <p className="sub">No dates this week yet — tap <b>+ Date</b> to take roll, or ◀ to see earlier weeks.</p>
+      )}
+
+      {teams.length > 0 && (
         <div className="panel" style={{ overflowX: 'auto' }}>
           <table className="table-compact">
             <thead>
               <tr>
                 <th>Team</th>
-                {cols.map((c) =>
-                  c.type === 'date' ? (
-                    <th key={c.date}>
-                      {c.weekFirst && (
-                        <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => collapseWeek(c.weekKey)} title="Collapse week" aria-label="Collapse week">▼</button>
-                      )}
-                      {monthName(c.date)} {dispDate(c.date)}
-                      <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => handleDeleteDate(c.date)} aria-label={`Delete ${c.date}`}>✕</button>
-                    </th>
-                  ) : (
-                    <th key={c.weekKey}>
-                      <button className="btn ghost" type="button" onClick={() => expandWeek(c.weekKey)}>▶ {formatWeekRange(c.dates)}</button>
-                    </th>
-                  )
-                )}
+                {cols.map((d) => (
+                  <th key={d}>
+                    {monthName(d)} {dispDate(d)}
+                    <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => handleDeleteDate(d)} aria-label={`Delete ${d}`}>✕</button>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -267,21 +276,13 @@ export function AttendanceModule() {
                     <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => setReportTeamId(team.id)} aria-label={`${team.name} report`}>📊</button>
                     <button className="btn ghost" style={{ padding: '4px 6px' }} type="button" onClick={() => handleDeleteTeam(team)} aria-label={`Delete ${team.name}`}>✕</button>
                   </th>
-                  {cols.map((c) => {
-                    if (c.type === 'date') {
-                      const cnt = presentCount(teamRecords, team.members, c.date)
-                      return (
-                        <td key={c.date}>
-                          <button className="btn" type="button" onClick={() => setRollCall({ teamId: team.id, date: c.date })}>
-                            {cnt === null ? '+' : cnt}
-                          </button>
-                        </td>
-                      )
-                    }
-                    const ws = weekTeamSum(teamRecords, team.members, c.dates)
+                  {cols.map((d) => {
+                    const cnt = presentCount(teamRecords, team.members, d)
                     return (
-                      <td key={c.weekKey}>
-                        <button className="btn ghost" type="button" onClick={() => expandWeek(c.weekKey)}>{ws.logged ? ws.sum : '···'}</button>
+                      <td key={d}>
+                        <button className="btn" type="button" onClick={() => setRollCall({ teamId: team.id, date: d })}>
+                          {cnt === null ? '+' : cnt}
+                        </button>
                       </td>
                     )
                   })}
@@ -290,13 +291,9 @@ export function AttendanceModule() {
               })}
               <tr>
                 <th>Total</th>
-                {cols.map((c) =>
-                  c.type === 'date' ? (
-                    <td key={c.date}>{dateTotal(records, teams, c.date)}</td>
-                  ) : (
-                    <td key={c.weekKey}>{weekDateTotal(records, teams, c.dates)}</td>
-                  )
-                )}
+                {cols.map((d) => (
+                  <td key={d}>{dateTotal(records, teams, d)}</td>
+                ))}
               </tr>
             </tbody>
           </table>

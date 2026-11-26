@@ -99,6 +99,20 @@ export async function clearCell(teamId, athleteIds, date) {
   if (error) throw error
 }
 
+// Who was there: the athletes marked present or late on one team on one
+// date. Floor Log uses this to put a whole group on the floor at once.
+export async function fetchAttendingAthleteIds(facilityId, teamId, date) {
+  const { data, error } = await supabase
+    .from('attendance')
+    .select('athlete_id')
+    .eq('facility_id', facilityId)
+    .eq('team_id', teamId)
+    .eq('date', date)
+    .in('status', ['present', 'late'])
+  if (error) throw error
+  return data.map((r) => r.athlete_id)
+}
+
 // Dates are global, not team-owned — deleting one clears it for every
 // team/athlete in the facility, matching the reference.
 export async function deleteDate(facilityId, date) {

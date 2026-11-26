@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { InvitePanel } from './InvitePanel'
 import { BrandingSettings } from '../modules/branding/BrandingSettings'
@@ -35,6 +35,26 @@ export function AppShell() {
   // MODE_LABELS entirely, reachable only via the owner-only button below.
   const activeMode = mode === 'settings' && isOwner ? 'settings' : (visibleModes.includes(mode) ? mode : 'reports')
 
+  // Floor Log stays mounted once opened — hidden, not unmounted, while
+  // another tab is up — so the athletes on the floor, who's selected, the
+  // date and the open session are exactly as left when the coach comes
+  // back. Keyed by facility so switching facilities still starts clean.
+  // Every other tab mounts fresh each visit, as before.
+  const [floorOpened, setFloorOpened] = useState(false)
+  const keepFloor = !isAthlete && (floorOpened || activeMode === 'floor')
+  const scrollByMode = useRef({})
+
+  function goTo(next) {
+    scrollByMode.current[activeMode] = window.scrollY
+    if (next === 'floor') setFloorOpened(true)
+    setMode(next)
+  }
+
+  // Coming back to Floor Log also returns to where the coach was scrolled.
+  useLayoutEffect(() => {
+    if (activeMode === 'floor') window.scrollTo(0, scrollByMode.current.floor || 0)
+  }, [activeMode])
+
   return (
     <div className="wrap">
       <header className="brandbar no-print">
@@ -64,7 +84,7 @@ export function AppShell() {
               className="btn ghost btn-small"
               type="button"
               aria-current={activeMode === 'settings'}
-              onClick={() => setMode('settings')}
+              onClick={() => goTo('settings')}
             >
               Branding
             </button>
@@ -85,7 +105,7 @@ export function AppShell() {
             key={m}
             type="button"
             aria-current={m === activeMode}
-            onClick={() => setMode(m)}
+            onClick={() => goTo(m)}
           >
             {MODE_LABELS[m]}
           </button>
@@ -99,9 +119,7 @@ export function AppShell() {
           <TrackerModule />
         ) : activeMode === 'build' ? (
           <BuildProgramModule />
-        ) : activeMode === 'floor' ? (
-          <FloorLogModule />
-        ) : activeMode === 'att' ? (
+        ) : activeMode === 'floor' ? null : activeMode === 'att' ? (
           <AttendanceModule />
         ) : activeMode === 'assess' ? (
           <AssessmentModule />
@@ -109,6 +127,12 @@ export function AppShell() {
           <ReportsModule />
         ) : (
           <p>{MODE_LABELS[activeMode]} — not built yet (Phase 4).</p>
+        )}
+
+        {keepFloor && (
+          <div hidden={activeMode !== 'floor'}>
+            <FloorLogModule key={membership.facilityId} active={activeMode === 'floor'} />
+          </div>
         )}
 
         {inviteOpen && (
