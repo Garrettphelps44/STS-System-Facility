@@ -6,7 +6,7 @@ import { DEFAULT_METRICS } from './metrics'
 export async function fetchAthletes(facilityId) {
   const { data, error } = await supabase
     .from('athletes')
-    .select('id, name, sport, sex, grad_year, height_feet, height_inches')
+    .select('id, name, sport, sex, grad_year, height_feet, height_inches, program_id')
     .eq('facility_id', facilityId)
     .order('name')
   if (error) throw error

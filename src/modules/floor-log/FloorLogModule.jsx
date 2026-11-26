@@ -5,6 +5,7 @@ import * as buildProgramApi from '../build-program/buildProgramApi'
 import { mondayISO } from '../build-program/constants'
 import { AddPlayerModal } from './AddPlayerModal'
 import { FloorLogSession } from './FloorLogSession'
+import * as floorLogApi from './floorLogApi'
 
 function playerLabel(a) {
   return a ? a.name + (a.height_feet != null ? ` — ${a.height_feet}'${a.height_inches || 0}"` : '') : ''
@@ -14,9 +15,14 @@ export function FloorLogModule() {
   const { membership } = useAuth()
   const facilityId = membership.facilityId
 
+  // Each athlete has their own program (athletes.program_id); an athlete
+  // with none assigned uses the facility default — the most recently
+  // created program. The Program dropdown always shows the selected
+  // athlete's program, so nothing carries over from one athlete to the next.
   const [programs, setPrograms] = useState([])
-  const [programId, setProgramId] = useState('')
-  const [program, setProgram] = useState(null)
+  const [defaultProgramId, setDefaultProgramId] = useState('')
+  const [programCache, setProgramCache] = useState({}) // id -> full program row
+  const [programError, setProgramError] = useState('')
   const [athletes, setAthletes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -40,7 +46,7 @@ export function FloorLogModule() {
         if (!active) return
         setPrograms(progs)
         setAthletes(aths)
-        if (progs.length) setProgramId(progs[0].id)
+        if (progs.length) setDefaultProgramId(progs[0].id)
       } catch (err) {
         if (active) setError(err.message)
       } finally {
@@ -51,18 +57,50 @@ export function FloorLogModule() {
     return () => { active = false }
   }, [facilityId])
 
+  const activeAthlete = useMemo(() => athletes.find((a) => a.id === activeId) || null, [athletes, activeId])
+
+  const effectiveProgramId = useMemo(() => {
+    const mine = activeAthlete?.program_id
+    return mine && programs.some((p) => p.id === mine) ? mine : defaultProgramId
+  }, [activeAthlete, programs, defaultProgramId])
+  // Only ever the program for whoever is selected right now — never a
+  // previous athlete's, which is what keeps a session from being seeded
+  // from the wrong program while the next one loads.
+  const program = effectiveProgramId ? programCache[effectiveProgramId] || null : null
+
   useEffect(() => {
+    if (!effectiveProgramId || programCache[effectiveProgramId]) return
     let active = true
-    if (!programId) { setProgram(null); return }
-    buildProgramApi.fetchProgram(programId).then((row) => {
+    buildProgramApi.fetchProgram(effectiveProgramId).then((row) => {
       if (!active) return
-      setProgram(row)
-      setDate((d) => row.start_date || d || mondayISO())
+      setProgramCache((c) => ({ ...c, [row.id]: row }))
+      // First load only: start on the program's start date. Switching
+      // athletes (and so programs) keeps the date you're on.
+      setDate((d) => d || row.start_date || mondayISO())
     }).catch((err) => active && setError(err.message))
     return () => { active = false }
-  }, [programId])
+  }, [effectiveProgramId, programCache])
 
-  const activeAthlete = useMemo(() => athletes.find((a) => a.id === activeId) || null, [athletes, activeId])
+  // Assign a program to the selected athlete only. The session open on
+  // screen was built from their old program, so it's reloaded from the
+  // new one — asking first if sets were already logged in it.
+  async function handleProgramChange(newId) {
+    if (!activeAthlete || !newId || newId === effectiveProgramId) return
+    setProgramError('')
+    try {
+      if (date) {
+        const sess = await floorLogApi.ensureSession(facilityId, activeAthlete.id, date)
+        const rows = await floorLogApi.fetchLogs(sess.id)
+        const newName = programs.find((p) => p.id === newId)?.name || 'this program'
+        if (rows.some((r) => r.set_index > 0) && !window.confirm(`Move ${activeAthlete.name} to ${newName}? The ${date} session will be reloaded from it, clearing what's been logged in it.`)) return
+        await floorLogApi.switchSessionDay(sess.id, null)
+      }
+      await trackerApi.updateAthlete(activeAthlete.id, { program_id: newId })
+      await refreshAthletes()
+    } catch (err) {
+      setProgramError(err.message)
+    }
+  }
 
   const filteredAthletes = useMemo(() => {
     const t = query.toLowerCase()
@@ -99,13 +137,14 @@ export function FloorLogModule() {
 
       <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
         <label className="field" style={{ flex: 1, minWidth: 200, marginBottom: 0 }}>
-          <span className="lab">Program</span>
-          <select value={programId} onChange={(e) => setProgramId(e.target.value)}>
+          <span className="lab">Program<span className="hint">{activeAthlete ? `for ${activeAthlete.name}` : 'pick a player first'}</span></span>
+          <select value={effectiveProgramId || ''} disabled={!activeAthlete} onChange={(e) => handleProgramChange(e.target.value)}>
             {!programs.length && <option value="">— build or save a program first —</option>}
             {programs.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
+          {programError && <span className="error-text" role="alert">{programError}</span>}
         </label>
 
         <label className="field" style={{ flex: 2, minWidth: 220, marginBottom: 0, position: 'relative' }}>
@@ -166,8 +205,8 @@ export function FloorLogModule() {
         />
       )}
 
-      {!program && <p className="sub">No program available. Build one in Build Program (or save one) first.</p>}
-      {program && !activeAthlete && <p className="sub">Add an athlete above to start logging.</p>}
+      {!programs.length && <p className="sub">No program available. Build one in Build Program (or save one) first.</p>}
+      {programs.length > 0 && !activeAthlete && <p className="sub">Add an athlete above to start logging.</p>}
       {program && activeAthlete && !date && <p className="sub">Pick a date.</p>}
       {program && activeAthlete && date && (
         <FloorLogSession
