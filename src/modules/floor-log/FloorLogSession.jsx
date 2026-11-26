@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import * as api from './floorLogApi'
 import * as assessmentApi from '../assessment/assessmentApi'
-import { resolveDaySession } from './floorEngine'
+import { programDays, resolveDaySession } from './floorEngine'
 import { athleteWeekTotals, planAutoFill, priorWeekWeights, progressedPSC } from './progression'
 import { EXDB, EXNAMES, wkValue } from '../build-program/engine/workload'
 
@@ -23,10 +23,6 @@ function groupLogs(rows) {
   return [...map.values()].sort((a, b) => a.exercise_index - b.exercise_index)
 }
 
-function heightLabel(a) {
-  return a.height_feet != null ? `${a.height_feet}'${a.height_inches || 0}"` : 'no height'
-}
-
 export function FloorLogSession({ facilityId, athlete, program, date }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -42,14 +38,29 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
     setLoading(true)
     setError('')
     try {
-      const day = resolveDaySession(program, date)
+      // The session's program day is the one the coach picked for this
+      // athlete (sess.day_index), else whatever the program has on this date.
       const sess = await api.ensureSession(facilityId, athlete.id, date)
+      const scheduled = resolveDaySession(program, date, sess.day_index)
       let rows = await api.fetchLogs(sess.id)
-      const isFreshSession = !rows.length
 
-      if (isFreshSession && !day.offday && day.prescribed.length) {
-        rows = await api.seedExercises(facilityId, sess.id, athlete.id, day.prescribed)
+      // First open: a program day gets its program exercises; a day with
+      // no programmed session gets 5 blank boxes to build the athlete's own.
+      if (!rows.length) {
+        if (!scheduled.offday && scheduled.prescribed.length) {
+          rows = await api.seedExercises(facilityId, sess.id, athlete.id, scheduled.prescribed)
+        } else if (scheduled.offday) {
+          rows = await api.seedBlankExercises(facilityId, sess.id, athlete.id)
+        }
       }
+
+      // An "own session" is one where every exercise was added by hand —
+      // none came from the program (program rows always carry `prescribed`).
+      // That's the default on a non-program day, and what "+" makes on any
+      // day. It's treated like an off-day for the PSC: an average training
+      // day's share of the week, not a program day's.
+      const custom = rows.length > 0 && rows.every((r) => r.prescribed == null)
+      const day = custom ? { ...scheduled, offday: true, custom: true } : { ...scheduled, custom: false }
 
       // Assessment auto-fill — runs on any load of a session that still
       // has no PSC (sess.projected is the "auto-fill has happened"
@@ -220,6 +231,36 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
     setTimeout(() => setSavedFlash(false), 1400)
   }
 
+  // Put this athlete on a different program day for this session. The
+  // day's exercises are re-seeded and its PSC/weights re-filled; if sets
+  // have already been logged (Next Set pressed), ask first, since those
+  // are cleared along with the old day's exercises.
+  async function handleChooseDay(index) {
+    if (!ctx.custom && index === ctx.dayIndex) return
+    const logged = slots.some((s) => s.sets.length > 1)
+    if (logged && !window.confirm(`Switch ${athlete.name} to Day ${index + 1}? This replaces this session's exercises and clears what's been logged in it.`)) return
+    try {
+      await api.switchSessionDay(sessionId, index)
+      await loadSession()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // "+": the athlete's own session — swaps this session's exercises for 5
+  // blank boxes the coach fills in. Asks first if sets were already logged.
+  async function handleOwnSession() {
+    if (ctx.custom) return
+    const logged = slots.some((s) => s.sets.length > 1)
+    if (logged && !window.confirm(`Start ${athlete.name}'s own session? This replaces this session's exercises with ${api.BLANK_EXERCISE_COUNT} blank ones and clears what's been logged in it.`)) return
+    try {
+      await api.startOwnSession(facilityId, sessionId, athlete.id)
+      await loadSession()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   async function handleCancel() {
     if (!window.confirm(`Cancel this session? Clears logged sets for ${athlete.name} on ${date} and reloads the program.`)) return
     try {
@@ -237,32 +278,67 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
     <div>
       {error && <p className="error-text" role="alert">{error}</p>}
 
-      <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start' }}>
-        <div>
-          <p className="eyebrow" style={{ marginBottom: 2 }}>ASC</p>
-          <b title="Athlete Strength Capacity — tap to override" onClick={handleAscClick} style={{ cursor: 'pointer', fontSize: 20, color: over ? 'var(--gold)' : 'var(--white)' }}>
-            {ascDisp.toFixed(2)}
-          </b>
+      {/* ASC/PSC and the Training day picker share one row (wrapping to two
+          on a narrow screen), each in its own box. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'stretch' }}>
+        <div className="panel" style={{ flex: '0 0 auto', display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+          <div>
+            <p className="eyebrow" style={{ marginBottom: 2 }}>ASC</p>
+            <b title="Athlete Strength Capacity — tap to override" onClick={handleAscClick} style={{ cursor: 'pointer', fontSize: 20, color: over ? 'var(--gold)' : 'var(--white)' }}>
+              {ascDisp.toFixed(2)}
+            </b>
+          </div>
+          <label className="field" style={{ marginBottom: 0 }}>
+            <span className="lab">PSC</span>
+            <input
+              type="number"
+              step="any"
+              placeholder="—"
+              value={projected}
+              onChange={(e) => handleProjectedChange(e.target.value)}
+              style={{ width: 120, ...(over ? { borderColor: 'var(--gold)' } : {}) }}
+            />
+          </label>
         </div>
-        <label className="field" style={{ marginBottom: 0 }}>
-          <span className="lab">PSC</span>
-          <input
-            type="number"
-            step="any"
-            placeholder="—"
-            value={projected}
-            onChange={(e) => handleProjectedChange(e.target.value)}
-            style={over ? { borderColor: 'var(--gold)' } : undefined}
-          />
-        </label>
-        <div className="sub">
-          {ctx.offday ? `Off-day session · ${date}` : `Week ${ctx.week} · ${ctx.wd} · Code ${ctx.code}`}
-          <br />
-          {athlete.name} · {heightLabel(athlete)}
-        </div>
+
+        {programDays(program).length > 0 && ctx.week != null && (
+          <div className="panel" style={{ flex: '1 1 380px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+            <span className="lab" style={{ marginRight: 6 }}>Training day</span>
+            {programDays(program).map((d) => (
+              <button
+                key={d.index}
+                className="btn"
+                type="button"
+                aria-pressed={!ctx.custom && !ctx.offday && ctx.dayIndex === d.index}
+                title={`${d.weekday} in the program · Session ${d.code}${d.index === ctx.defaultDayIndex ? ' · scheduled for this date' : ''}`}
+                style={{ padding: '6px 10px' }}
+                onClick={() => handleChooseDay(d.index)}
+              >
+                Day {d.index + 1} · {d.weekday}
+              </button>
+            ))}
+            <button
+              className="btn"
+              type="button"
+              aria-pressed={!!ctx.custom}
+              aria-label="Own session"
+              title={`Own session — ${api.BLANK_EXERCISE_COUNT} blank exercises to fill in`}
+              style={{ padding: '6px 12px', fontWeight: 800 }}
+              onClick={handleOwnSession}
+            >
+              +
+            </button>
+            {!ctx.custom && !ctx.offday && ctx.defaultDayIndex !== ctx.dayIndex && (
+              <span className="sub" style={{ marginLeft: 6 }}>
+                {ctx.defaultDayIndex == null ? `Not a program day on ${date} — doing Day ${ctx.dayIndex + 1}` : `Scheduled: Day ${ctx.defaultDayIndex + 1} — doing Day ${ctx.dayIndex + 1}`}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {ctx.offday && <p className="sub">Not a program training day — add movements with <b>+ Next Exercise</b> to log a one-off lift.</p>}
+      {ctx.custom && <p className="sub">Own session — search a movement in each box below (add more with <b>+ Next Exercise</b>). Pick a training day above to load the program instead.</p>}
+      {ctx.offday && !ctx.custom && <p className="sub">Not a program training day — pick a training day above to load its exercises, or add movements with <b>+ Next Exercise</b>.</p>}
       {athlete.height_feet == null && <p className="sub">Set {athlete.name}'s height in the Roster (Tracker) — the Strength Capacity math needs it to compute workload.</p>}
 
       {slots.map((slot) => {
@@ -296,7 +372,7 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
               )}
               <button className="btn ghost" type="button" onClick={() => handleRemoveExercise(slot)} title="Remove exercise" aria-label="Remove exercise">✕</button>
             </div>
-            <p className="sub" style={{ margin: '8px 0' }}>
+            <p className="sub" style={{ margin: '4px 0' }}>
               {slot.prescribed ? <>target: <b style={{ color: 'var(--white)' }}>{slot.target || ''}</b> · {slot.prescribed}</> : 'added exercise'}
               {slot.exercise && !hasCoeff && <span style={{ color: 'var(--gold)' }}> ⚠ pick a listed movement for a coefficient</span>}
             </p>
@@ -320,7 +396,7 @@ export function FloorLogSession({ facilityId, athlete, program, date }) {
                 </tbody>
               </table>
             </div>
-            <p className="sub" style={{ margin: '8px 0 0' }}>exercise workload: <b style={{ color: 'var(--white)' }}>{(Math.round(sub * 100) / 100).toFixed(2)}</b></p>
+            <p className="sub" style={{ margin: '4px 0 0' }}>exercise workload: <b style={{ color: 'var(--white)' }}>{(Math.round(sub * 100) / 100).toFixed(2)}</b></p>
           </div>
         )
       })}

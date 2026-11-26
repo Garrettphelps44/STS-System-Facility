@@ -2,9 +2,9 @@
 // engine rather than reading program_weeks (which no module actually
 // populates — resolveSession() is a pure function of constraints/week/
 // day, so program_weeks was never needed for this).
-import { DAYS } from '../build-program/constants'
+import { DAYS, addDays, isoToDate } from '../build-program/constants'
 import { buildCalMap } from '../build-program/calendar'
-import { resolveSession } from '../build-program/engine/session'
+import { codeLetter, resolveSession } from '../build-program/engine/session'
 import { wkMatch } from '../build-program/engine/workload'
 
 // Ported from reference/reference:Index.html (setsRepsFrom, ~line 3118).
@@ -37,24 +37,51 @@ export function contextFor(program) {
   return { system: program.system, sessionLength: c.sessionLength, equipment: c.equipment, skill: c.skill, sport: c.sport }
 }
 
-// Resolves a calendar date against a saved program.
-//
-// buildCalMap only has entries for actual scheduled training days across
-// the 52-week span, so "no entry for this date" already covers every
-// off-day case the reference distinguished separately (rest day, before
-// the program's start, after week 52, no program at all) — no need to
-// re-derive which one it was.
-export function resolveDaySession(program, dateISO) {
-  if (!program || !program.start_date) return { offday: true, prescribed: [] }
-  const days = (program.constraints || {}).days || {}
-  const calMap = buildCalMap(program.start_date, days)
-  const hit = calMap[dateISO]
-  if (!hit) return { offday: true, prescribed: [] }
+// The program's training days, in week order, as built in Build Program
+// (e.g. Mon/Tue/Thu/Fri -> Day 1-4 = Sessions A-D). These are the choices
+// a coach picks from in Floor Log.
+export function programDays(program) {
+  const days = (program?.constraints || {}).days || {}
+  return DAYS.filter((d) => days[d]).map((weekday, index) => ({ index, weekday, type: days[weekday], code: codeLetter(index) }))
+}
 
+// Program week (1-52) a date falls in, counted from the Monday of the
+// program's start week — whether or not the date itself is a program day.
+// null outside the program's 52 weeks.
+export function weekOfDate(program, dateISO) {
+  if (!program?.start_date || !dateISO) return null
+  const start = isoToDate(program.start_date)
+  const startMon = addDays(start, -((start.getDay() + 6) % 7))
+  const diff = Math.round((isoToDate(dateISO) - startMon) / 86400000)
+  const week = Math.floor(diff / 7) + 1
+  return diff >= 0 && week <= 52 ? week : null
+}
+
+// Resolves one athlete's session on a date against a saved program.
+//
+// By default the day is whatever the program has scheduled on that date
+// (buildCalMap only has entries for actual scheduled training days, so
+// "no entry" covers every off-day case: rest day, before the program's
+// start, after week 52). `chosenDayIndex` (the session's day_index — the
+// program day the coach picked for this athlete, 0 = Day 1) overrides
+// that: same week as the date, but that program day's session. That's how
+// athletes in the same group can be on different days, including doing a
+// program day on a date the program has off.
+export function resolveDaySession(program, dateISO, chosenDayIndex = null) {
+  if (!program || !program.start_date) return { offday: true, prescribed: [], defaultDayIndex: null }
+  const days = (program.constraints || {}).days || {}
   const activeDayNames = DAYS.filter((d) => days[d])
-  const wd = activeDayNames[hit.di]
+  const hit = buildCalMap(program.start_date, days)[dateISO]
+  const defaultDayIndex = hit ? hit.di : null
+  const dayIndex = chosenDayIndex != null && chosenDayIndex < activeDayNames.length ? chosenDayIndex : defaultDayIndex
+  const week = hit ? hit.week : weekOfDate(program, dateISO)
+  if (dayIndex == null || week == null) {
+    return { offday: true, prescribed: [], week, defaultDayIndex, trainingDays: activeDayNames.length }
+  }
+
+  const wd = activeDayNames[dayIndex]
   const cx = contextFor(program)
-  const sess = resolveSession(hit.week, hit.di, hit.type, cx)
+  const sess = resolveSession(week, dayIndex, days[wd], cx)
 
   const prescribed = []
   sess.blocks
@@ -66,5 +93,5 @@ export function resolveDaySession(program, dateISO) {
       })
     })
 
-  return { offday: false, week: hit.week, wd, dayIndex: hit.di, trainingDays: activeDayNames.length, code: sess.code, prescribed }
+  return { offday: false, week, wd, dayIndex, defaultDayIndex, trainingDays: activeDayNames.length, code: sess.code, prescribed }
 }

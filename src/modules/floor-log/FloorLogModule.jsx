@@ -93,7 +93,7 @@ export function FloorLogModule() {
   if (error) return <p className="error-text" role="alert">{error}</p>
 
   return (
-    <div>
+    <div className="floor-compact">
       <h2>Floor Log</h2>
       <p className="sub">Select a player and date — the program loads its movements. Search a movement, log set · weight · reps · tempo, hit Next Set.</p>
 

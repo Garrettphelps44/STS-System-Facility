@@ -405,6 +405,40 @@ th {
 .table-compact .btn {
   padding: 6px 12px;
 }
+/* Floor Log density — the coach scrolls through a dozen exercise boxes
+   per athlete on the floor, so this screen trades the app's roomy
+   form/standalone-button spacing for less vertical scrolling. Scoped to
+   .floor-compact (the Floor Log root) only; every other screen keeps the
+   default spacing. Absolutely-positioned dropdown panels set their own
+   padding inline, so they're unaffected. */
+.floor-compact .panel {
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.floor-compact .sub {
+  margin-bottom: 10px;
+}
+.floor-compact .eyebrow {
+  margin-bottom: 2px;
+}
+.floor-compact .field > .lab {
+  margin-bottom: 4px;
+}
+.floor-compact input:not([type='checkbox']):not([type='radio']),
+.floor-compact select {
+  padding: 7px 10px;
+}
+.floor-compact .btn {
+  padding: 7px 12px;
+}
+.floor-compact th,
+.floor-compact td {
+  padding: 3px 6px;
+}
+.floor-compact td .btn {
+  white-space: nowrap;
+}
+
 /* Freeze the name column (Attendance's Team, Test Database's Athlete)
    so it stays visible while scrolling right through date/test columns
    — covers both th:first-child (Test Database's header row, and every

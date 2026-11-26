@@ -5,7 +5,7 @@
 // + the currently-open program, but every formula/constant is unchanged.
 import { buildCalMap } from '../build-program/calendar'
 import { wkValue } from '../build-program/engine/workload'
-import { isBarbellMovement, roundPlate } from './floorEngine'
+import { isBarbellMovement, roundPlate, weekOfDate } from './floorEngine'
 
 const PROG_RATE = 0.02
 const AC_LO = 1.05
@@ -25,20 +25,30 @@ export function dayShares(D) {
   return w.map((x) => x / sum)
 }
 
+// Which program week a logged session belongs to, or null if it doesn't
+// count. A session on one of the program's scheduled days counts in that
+// week; so does a session on any other date where the coach picked a
+// program day for it (dayIndex set — e.g. a make-up of Day 2 on a
+// Wednesday). A one-off session on an off day with no program day picked
+// doesn't count, same as the reference silently dropping sessionForDate
+// errors.
+function sessionWeek(calMap, program, date, dayIndex) {
+  if (calMap[date]) return calMap[date].week
+  return dayIndex != null ? weekOfDate(program, date) : null
+}
+
 // Sums an athlete's logged session totals per resolved program week.
-// `history` is [{date, total}] for that athlete (ASC per session,
-// already resolved from floor_sessions/floor_logs by the caller).
-// Dates that aren't a scheduled day for this program are skipped, same
-// as the reference silently dropping sessionForDate errors.
+// `history` is [{date, total, dayIndex}] for that athlete (ASC per
+// session, already resolved from floor_sessions/floor_logs by the caller).
 export function athleteWeekTotals(history, program, exceptDate) {
   const days = (program.constraints || {}).days || {}
   const calMap = buildCalMap(program.start_date, days)
   const out = {}
-  history.forEach(({ date, total }) => {
+  history.forEach(({ date, total, dayIndex }) => {
     if (date === exceptDate || !total) return
-    const hit = calMap[date]
-    if (!hit) return
-    out[hit.week] = (out[hit.week] || 0) + total
+    const week = sessionWeek(calMap, program, date, dayIndex)
+    if (week == null) return
+    out[week] = (out[week] || 0) + total
   })
   return out
 }
@@ -109,13 +119,13 @@ export function priorWeekWeights(exerciseHistory, program, beforeWeek) {
   const days = (program.constraints || {}).days || {}
   const calMap = buildCalMap(program.start_date, days)
   const byExercise = {}
-  exerciseHistory.forEach(({ date, exercise, setIndex, weight }) => {
+  exerciseHistory.forEach(({ date, dayIndex, exercise, setIndex, weight }) => {
     if (weight == null || !exercise) return
-    const hit = calMap[date]
-    if (!hit || hit.week == null || hit.week >= beforeWeek) return
+    const week = sessionWeek(calMap, program, date, dayIndex)
+    if (week == null || week >= beforeWeek) return
     const weeks = byExercise[exercise] || (byExercise[exercise] = {})
-    const prev = weeks[hit.week]
-    if (!prev || setIndex >= prev.setIndex) weeks[hit.week] = { weight, setIndex }
+    const prev = weeks[week]
+    if (!prev || setIndex >= prev.setIndex) weeks[week] = { weight, setIndex }
   })
   const lookup = {}
   Object.entries(byExercise).forEach(([exercise, weeks]) => {
